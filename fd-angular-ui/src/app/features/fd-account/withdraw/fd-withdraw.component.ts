@@ -19,7 +19,8 @@ export class FdWithdrawComponent implements OnInit {
   
   request = {
     fdAccountNo: '',
-    targetAccountNo: '',
+    transferAccount: '',
+    withdrawalDate: new Date().toISOString().slice(0, 10),
     remarks: 'Premature Withdrawal'
   };
 

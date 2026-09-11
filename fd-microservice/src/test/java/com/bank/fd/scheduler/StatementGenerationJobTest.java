@@ -35,10 +35,8 @@ class StatementGenerationJobTest {
     private StatementGenerationJob statementJob;
 
     @Test
-    void testGenerateStatementsForPriorMonthDelta() {
+    void testGenerateDailyStatement() {
         LocalDate statementRunDate = LocalDate.of(2026, 3, 1);
-        LocalDate expectedPeriodStart = LocalDate.of(2026, 2, 1);
-        LocalDate expectedPeriodEnd = LocalDate.of(2026, 2, 28);
 
         FdAccount account = new FdAccount();
         account.setFdAccountNo("FD001000001");
@@ -46,9 +44,8 @@ class StatementGenerationJobTest {
         account.setAccruedInterest(new BigDecimal("3500.00")); // Lifetime accrued
 
         when(accountRepository.findAllActiveAccounts()).thenReturn(List.of(account));
-        // Prior month sum was 580.00
-        when(interestTransactionRepository.sumInterestBetween("FD001000001", expectedPeriodStart, expectedPeriodEnd))
-                .thenReturn(new BigDecimal("580.00"));
+        when(interestTransactionRepository.sumInterestBetween("FD001000001", statementRunDate, statementRunDate))
+                .thenReturn(new BigDecimal("18.00"));
 
         statementJob.generateStatements(statementRunDate);
 
@@ -59,7 +56,7 @@ class StatementGenerationJobTest {
         assertEquals("FD001000001", saved.getFdAccountNo());
         assertEquals(statementRunDate, saved.getStatementDate());
         assertEquals(new BigDecimal("100000.00"), saved.getOpeningBalance());
-        assertEquals(new BigDecimal("580.00"), saved.getInterestCredited()); // Verified delta, not 3500!
-        assertEquals(new BigDecimal("100580.00"), saved.getClosingBalance());
+        assertEquals(new BigDecimal("18.00"), saved.getInterestCredited());
+        assertEquals(new BigDecimal("100018.00"), saved.getClosingBalance());
     }
 }

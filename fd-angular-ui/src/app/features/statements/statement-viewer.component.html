@@ -7,9 +7,9 @@
   <div class="glass-card mb-4" *ngIf="statements.length > 0">
     <h3 class="mb-4">Interest Timeline</h3>
     <div class="chart-container">
-      <div class="bar-wrapper" *ngFor="let s of statements" [title]="s.date + ': ' + (s.interestCredited | currencyFormat)">
+      <div class="bar-wrapper" *ngFor="let s of statements" [title]="s.statementDate + ': ' + (s.interestCredited | currencyFormat)">
         <div class="bar" [style.height]="getBarHeight(s.interestCredited)"></div>
-        <div class="label">{{ s.date | date:'MMM yy' }}</div>
+        <div class="label">{{ s.statementDate | date:'MMM yy' }}</div>
       </div>
     </div>
   </div>
@@ -27,7 +27,7 @@
         </thead>
         <tbody *ngIf="!loading">
           <tr *ngFor="let s of statements">
-            <td>{{ s.date | date:'mediumDate' }}</td>
+            <td>{{ s.statementDate | date:'mediumDate' }}</td>
             <td>{{ s.openingBalance | currencyFormat }}</td>
             <td class="text-success">+{{ s.interestCredited | currencyFormat }}</td>
             <td><strong>{{ s.closingBalance | currencyFormat }}</strong></td>

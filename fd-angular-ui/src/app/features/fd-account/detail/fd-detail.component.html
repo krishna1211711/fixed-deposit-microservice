@@ -47,7 +47,7 @@
         
         <div class="detail-group">
           <label class="text-muted">Term</label>
-          <div class="value">{{ account.termMonths }} Months</div>
+          <div class="value">{{ account.tenureMonths }} Months</div>
         </div>
         
         <div class="detail-group">
@@ -60,10 +60,6 @@
           <div class="value">{{ account.createdAt | date:'medium' }}</div>
         </div>
         
-        <div class="detail-group">
-          <label class="text-muted">Branch Code</label>
-          <div class="value">{{ account.branchCode }}</div>
-        </div>
       </div>
     </div>
   </div>
@@ -82,15 +78,15 @@
           </thead>
           <tbody>
             <tr *ngFor="let tx of transactions">
-              <td>{{ tx.timestamp | date:'medium' }}</td>
+              <td>{{ tx.txnTimestamp | date:'medium' }}</td>
               <td>
                 <span class="badge" [ngClass]="{
-                  'badge-active': tx.type === 'CREDIT',
-                  'badge-warning': tx.type === 'DEBIT'
-                }">{{ tx.type }}</span>
+                  'badge-active': tx.txnType === 'DEPOSIT' || tx.txnType === 'INTEREST_CREDIT',
+                  'badge-warning': tx.txnType === 'WITHDRAWAL' || tx.txnType === 'PENALTY'
+                }">{{ tx.txnType }}</span>
               </td>
-              <td [ngClass]="tx.type === 'CREDIT' ? 'text-success' : 'text-danger'">
-                {{ tx.type === 'CREDIT' ? '+' : '-' }}{{ tx.amount | currencyFormat:account.currency }}
+              <td [ngClass]="tx.txnType === 'DEPOSIT' || tx.txnType === 'INTEREST_CREDIT' ? 'text-success' : 'text-danger'">
+                {{ tx.amount | currencyFormat:account.currency }}
               </td>
               <td>{{ tx.remarks }}</td>
             </tr>

@@ -41,7 +41,7 @@
             <td>{{ acc.productCode }}</td>
             <td>{{ acc.principalAmount | currencyFormat:acc.currency }}</td>
             <td>{{ acc.interestRate }}%</td>
-            <td>{{ acc.termMonths }} mo</td>
+            <td>{{ acc.tenureMonths }} mo</td>
             <td>
               <span class="badge" [ngClass]="{
                 'badge-active': acc.status === 'ACTIVE',

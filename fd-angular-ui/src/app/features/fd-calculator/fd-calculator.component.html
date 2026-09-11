@@ -10,7 +10,7 @@
         
         <div class="form-group">
           <label class="form-label">{{ 'fdCalc.principal' | translate }}</label>
-          <input type="number" class="form-control" name="principal" [(ngModel)]="request.principalAmount" required min="1000">
+          <input type="number" class="form-control" name="principal" [(ngModel)]="request.principal" required min="1000">
         </div>
 
         <div class="grid grid-cols-2">
@@ -77,7 +77,7 @@
         <div class="grid grid-cols-2 mt-4 gap-4">
           <div class="amount-display secondary">
             <span class="label">{{ 'fdCalc.principal' | translate }}</span>
-            <div class="value">{{ request.principalAmount | currencyFormat }}</div>
+            <div class="value">{{ request.principal | currencyFormat }}</div>
           </div>
           <div class="amount-display secondary">
             <span class="label">{{ 'fdCalc.interestEarned' | translate }}</span>

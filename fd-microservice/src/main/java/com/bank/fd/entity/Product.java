@@ -37,7 +37,7 @@ public class Product {
     @Column(name = "max_rate", precision = 5, scale = 2)
     private BigDecimal maxRate;
 
-    @Column(name = "min_deposit", precision = 18, scale = 2)
+    @Column(name = "min_deposit", precision = 18, scale = 3)
     private BigDecimal minDeposit;
 
     @Column(name = "rate_cap_addon", precision = 5, scale = 2)

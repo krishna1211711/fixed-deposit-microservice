@@ -19,6 +19,46 @@ security:
   - BearerAuth: []
 
 paths:
+  /calculate:
+    post:
+      summary: Calculate an FD maturity projection
+      description: Manual-compatible authenticated calculator endpoint for CUSTOMER users. Category add-ons are capped by configured pricing rules.
+      operationId: calculateFd
+      tags:
+        - FD Calculator
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [principal, termMonths, baseRate]
+              properties:
+                principal: { type: number, format: double, minimum: 1000 }
+                termMonths: { type: integer, minimum: 1 }
+                baseRate: { type: number, format: double }
+                compoundingFrequency: { type: string, default: QUARTERLY }
+                calculationType: { type: string, enum: [SIMPLE, COMPOUND], default: COMPOUND }
+                categories:
+                  type: array
+                  items: { type: string }
+      responses:
+        '200':
+          description: Maturity projection
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  maturityAmount: { type: number }
+                  interestEarned: { type: number }
+                  effectiveRate: { type: number }
+                  categoryAddons: { type: object, additionalProperties: true }
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '403':
+          $ref: '#/components/responses/403Forbidden'
+
   /account/create:
     post:
       summary: Create FD Account & Post Initial Deposit Transaction
@@ -72,6 +112,9 @@ paths:
           $ref: '#/components/responses/403Forbidden'
         '404':
           $ref: '#/components/responses/404NotFound'
+
+  /account/create-with-txn:
+    $ref: '#/paths/~1account~1create'
 
   /accounts/my:
     get:
@@ -170,8 +213,8 @@ paths:
 
   /account/{fdAccountNo}/statements:
     get:
-      summary: Fetch Monthly Statement Snapshots for FD Account
-      description: Retrieves the periodic statement entries recording opening balance, interest credited, and closing balance for each month.
+      summary: Fetch Daily and Final Statement Snapshots for FD Account
+      description: Retrieves idempotent daily statement entries plus the final closure statement, recording opening balance, interest credited, and closing balance.
       operationId: getAccountStatements
       tags:
         - Ledger & Statements
@@ -184,7 +227,7 @@ paths:
           example: "0010000018"
       responses:
         '200':
-          description: List of monthly statement snapshots
+          description: List of daily and final statement snapshots
           content:
             application/json:
               schema:

@@ -2,6 +2,7 @@ package com.bank.fd.service.impl;
 
 import com.bank.fd.entity.FdAccount;
 import com.bank.fd.helper.InterestCalculationHelper;
+import com.bank.fd.helper.CurrencyRules;
 import com.bank.fd.service.InterestEngineService;
 import org.springframework.stereotype.Service;
 
@@ -31,7 +32,7 @@ public class InterestEngineServiceImpl implements InterestEngineService {
             return BigDecimal.ZERO;
         }
         BigDecimal dailyAccrual = calculateDailyAccrualForAccount(account, startDate);
-        return dailyAccrual.multiply(BigDecimal.valueOf(daysBetween)).setScale(2, RoundingMode.HALF_UP);
+        return CurrencyRules.round(dailyAccrual.multiply(BigDecimal.valueOf(daysBetween)), account.getCurrency());
     }
 
     @Override
@@ -43,6 +44,6 @@ public class InterestEngineServiceImpl implements InterestEngineService {
                 account.getTenureMonths(),
                 compoundings
         );
-        return account.getPrincipalAmount().add(interest).setScale(2, RoundingMode.HALF_UP);
+        return CurrencyRules.round(account.getPrincipalAmount().add(interest), account.getCurrency());
     }
 }

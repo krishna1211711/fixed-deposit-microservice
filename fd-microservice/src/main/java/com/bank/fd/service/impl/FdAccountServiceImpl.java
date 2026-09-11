@@ -10,6 +10,7 @@ import com.bank.fd.event.EventPublisher;
 import com.bank.fd.exception.FdNotFoundException;
 import com.bank.fd.helper.AccountNumberGenerator;
 import com.bank.fd.helper.InterestCalculationHelper;
+import com.bank.fd.helper.CurrencyRules;
 import com.bank.fd.mapper.FdAccountMapper;
 import com.bank.fd.repository.FdAccountRepository;
 import com.bank.fd.repository.FdStatementRepository;
@@ -65,6 +66,13 @@ public class FdAccountServiceImpl implements FdAccountService {
     public FdAccountResponse createAccount(FdAccountCreateRequest request, String createdBy) {
         Product product = productService.validateProductForFd(
                 request.getProductCode(), request.getTermMonths(), request.getPrincipalAmount());
+        String currency = CurrencyRules.normalizeCode(request.getCurrency() != null
+                ? request.getCurrency() : product.getCurrency());
+        if (!currency.equalsIgnoreCase(product.getCurrency())) {
+            throw new com.bank.fd.exception.InvalidOperationException(
+                    "Product " + product.getProductCode() + " is denominated in " + product.getCurrency());
+        }
+        BigDecimal principal = CurrencyRules.normalizeAmount(request.getPrincipalAmount(), currency);
 
         // Apply category rate addons (e.g. SENIOR_CITIZEN, STAFF) capped at rateCapAddon
         BigDecimal finalRate = interestCalculationHelper.applyCategoryAddons(
@@ -84,8 +92,8 @@ public class FdAccountServiceImpl implements FdAccountService {
         account.setFdAccountNo(accountNo);
         account.setCustomerId(request.getCustomerId());
         account.setProductCode(request.getProductCode());
-        account.setCurrency(request.getCurrency() != null ? request.getCurrency() : "INR");
-        account.setPrincipalAmount(request.getPrincipalAmount());
+        account.setCurrency(currency);
+        account.setPrincipalAmount(principal);
         account.setInterestRate(finalRate);
         account.setTenureMonths(request.getTermMonths());
         account.setCompoundingFrequency(product.getCompoundingFrequency());
@@ -99,10 +107,10 @@ public class FdAccountServiceImpl implements FdAccountService {
         account = accountRepository.save(account);
 
         FdTransaction initialTxn = transactionService.recordDeposit(
-                accountNo, request.getPrincipalAmount(), request.getCurrency());
+                accountNo, principal, currency);
 
         eventPublisher.publishFdOpened(accountNo, request.getCustomerId(),
-                request.getPrincipalAmount(), finalRate, account.getMaturityDate());
+                principal, finalRate, account.getMaturityDate());
 
         FdAccountResponse response = accountMapper.toResponse(account);
         response.setInitialTransactionId(initialTxn.getTxnId());

@@ -2,7 +2,7 @@ server:
   port: 9090
 
 jwt:
-  secret: ${JWT_SECRET:fd-microservice-jwt-secret-key-that-is-at-least-256-bits-long-for-HS256}
+  secret: ${JWT_SECRET:fd-local-demo-secret-change-before-any-real-deployment}
 
 spring:
   application:
@@ -10,6 +10,19 @@ spring:
   cloud:
     gateway:
       routes:
+        - id: report-health-route
+          uri: ${REPORT_SERVICE_URI:http://localhost:5000}
+          predicates:
+            - Path=/reports/health
+          filters:
+            - SetPath=/health
+        - id: report-route
+          uri: ${REPORT_SERVICE_URI:http://localhost:5000}
+          predicates:
+            - Path=/reports/**
+          filters:
+            - JwtValidationFilter
+            - StripPrefix=1
         - id: auth-route
           uri: ${FD_SERVICE_URI:http://localhost:8080}
           predicates:
@@ -19,7 +32,13 @@ spring:
           predicates:
             - Path=/api/**
           filters:
-            - JwtValidation
+            - JwtValidationFilter
+        - id: manual-report-compatibility-route
+          uri: ${FD_SERVICE_URI:http://localhost:8080}
+          predicates:
+            - Path=/report/**
+          filters:
+            - JwtValidationFilter
 
 management:
   endpoints:

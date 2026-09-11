@@ -7,8 +7,8 @@ import { FdAccount, Transaction, Statement } from '../models/models';
   providedIn: 'root'
 })
 export class FdAccountService {
-  private apiUrl = 'http://localhost:8080/api/fd/account';
-  private allAccountsUrl = 'http://localhost:8080/api/fd/accounts';
+  private apiUrl = '/api/fd/account';
+  private allAccountsUrl = '/api/fd/accounts';
 
   constructor(private http: HttpClient) {}
 

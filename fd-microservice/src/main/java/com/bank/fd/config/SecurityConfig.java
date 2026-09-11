@@ -62,8 +62,6 @@ public class SecurityConfig {
                         "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll()
                 // Actuator health checks
                 .requestMatchers("/actuator/**").permitAll()
-                // FD calculator is public — no login required
-                .requestMatchers("/api/fd/calculator/**").permitAll()
                 // H2 console (only accessible in dev profile when h2 is on classpath)
                 .requestMatchers("/h2-console/**").permitAll()
                 .anyRequest().authenticated()

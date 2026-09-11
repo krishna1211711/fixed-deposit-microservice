@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -25,7 +25,8 @@ export class FdListComponent implements OnInit {
 
   constructor(
     private fdService: FdAccountService,
-    public authService: AuthService
+    public authService: AuthService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -43,8 +44,12 @@ export class FdListComponent implements OnInit {
         this.accounts = data;
         this.filteredAccounts = [...this.accounts];
         this.loading = false;
+        this.cdr.detectChanges();
       },
-      error: () => this.loading = false
+      error: () => {
+        this.loading = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 

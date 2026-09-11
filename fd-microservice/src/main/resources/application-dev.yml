@@ -19,17 +19,17 @@ spring:
   flyway:
     enabled: false
   mail:
-    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
-    port: ${SPRING_MAIL_PORT:587}
-    username: ${SPRING_MAIL_USERNAME:bankingtechmail@gmail.com}
-    password: ${SPRING_MAIL_PASSWORD:Bankingtech@1}
+    host: ${SPRING_MAIL_HOST:localhost}
+    port: ${SPRING_MAIL_PORT:1025}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
-          auth: true
+          auth: ${SPRING_MAIL_AUTH:false}
           starttls:
-            enable: true
-            required: true
+            enable: ${SPRING_MAIL_STARTTLS:false}
+            required: ${SPRING_MAIL_STARTTLS:false}
           connectiontimeout: 5000
           timeout: 5000
           writetimeout: 5000

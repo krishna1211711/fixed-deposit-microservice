@@ -19,13 +19,13 @@ public class FdStatement {
     @Column(name = "statement_date")
     private LocalDate statementDate;
 
-    @Column(name = "opening_balance", precision = 18, scale = 2)
+    @Column(name = "opening_balance", precision = 18, scale = 3)
     private BigDecimal openingBalance;
 
-    @Column(name = "interest_credited", precision = 18, scale = 2)
+    @Column(name = "interest_credited", precision = 18, scale = 3)
     private BigDecimal interestCredited = BigDecimal.ZERO;
 
-    @Column(name = "closing_balance", precision = 18, scale = 2)
+    @Column(name = "closing_balance", precision = 18, scale = 3)
     private BigDecimal closingBalance;
 
     public FdStatement() {}

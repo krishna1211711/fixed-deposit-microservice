@@ -7,7 +7,7 @@ import { FdSimulationRequest, FdSimulationResponse } from '../models/models';
   providedIn: 'root'
 })
 export class FdCalculatorService {
-  private apiUrl = 'http://localhost:8080/api/fd/calculator';
+  private apiUrl = '/api/fd/calculator';
 
   constructor(private http: HttpClient) {}
 

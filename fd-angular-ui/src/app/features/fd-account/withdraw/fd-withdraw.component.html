@@ -41,7 +41,12 @@
         
         <div class="form-group">
           <label class="form-label">Transfer to Account No.</label>
-          <input type="text" class="form-control" name="targetAccount" [(ngModel)]="request.targetAccountNo" required minlength="8">
+          <input type="text" class="form-control" name="transferAccount" [(ngModel)]="request.transferAccount" required minlength="8">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Withdrawal Date</label>
+          <input type="date" class="form-control" name="withdrawalDate" [(ngModel)]="request.withdrawalDate" required>
         </div>
         
         <div class="form-group">

@@ -32,34 +32,27 @@ public class StatementGenerationJob {
         this.interestTransactionRepository = interestTransactionRepository;
     }
 
-    @Scheduled(cron = "0 0 2 1 * ?")
+    @Scheduled(cron = "0 0 2 * * ?")
     public void executeStatementGeneration() {
         generateStatements(LocalDate.now());
     }
 
     /**
-     * Generates monthly statements for all active FD accounts.
-     *
-     * <p>The {@code interest_credited} column records the interest accrued
-     * during the <em>previous calendar month</em> only — NOT the cumulative
-     * lifetime accrued interest. This is computed by summing daily accrual
-     * rows from {@code fd_interest_transactions} for the prior month range.
+     * Generates one idempotent daily statement for every active FD account.
      */
     @Transactional
     public void generateStatements(LocalDate date) {
-        // Statement covers the previous calendar month
-        LocalDate periodStart = date.minusMonths(1).withDayOfMonth(1);
-        LocalDate periodEnd   = date.withDayOfMonth(1).minusDays(1);
-
         List<FdAccount> activeAccounts = accountRepository.findAllActiveAccounts();
-        log.info("StatementGenerationJob: generating statements for {} active accounts. Period: {} to {}",
-                activeAccounts.size(), periodStart, periodEnd);
+        log.info("StatementGenerationJob: generating daily statements for {} active accounts on {}",
+                activeAccounts.size(), date);
 
         for (FdAccount account : activeAccounts) {
             try {
-                // Sum daily accrual entries for this account in the prior month
+                if (statementRepository.findByFdAccountNoAndStatementDate(account.getFdAccountNo(), date).isPresent()) {
+                    continue;
+                }
                 BigDecimal interestCredited = interestTransactionRepository.sumInterestBetween(
-                        account.getFdAccountNo(), periodStart, periodEnd);
+                        account.getFdAccountNo(), date, date);
                 if (interestCredited == null) {
                     interestCredited = BigDecimal.ZERO;
                 }

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
@@ -15,7 +15,7 @@ import { CurrencyFormatPipe } from '../../shared/pipes/currency-format.pipe';
 })
 export class FdCalculatorComponent implements OnInit {
   request: FdSimulationRequest = {
-    principalAmount: 100000,
+    principal: 100000,
     termMonths: 12,
     baseRate: 5.5,
     compoundingFrequency: 'QUARTERLY',
@@ -33,7 +33,10 @@ export class FdCalculatorComponent implements OnInit {
   loading = false;
   error = '';
 
-  constructor(private calculatorService: FdCalculatorService) {}
+  constructor(
+    private calculatorService: FdCalculatorService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit() {
     this.calculate();
@@ -59,10 +62,12 @@ export class FdCalculatorComponent implements OnInit {
       next: (res) => {
         this.result = res;
         this.loading = false;
+        this.cdr.detectChanges();
       },
       error: (err) => {
         this.error = 'Failed to calculate. Please check inputs.';
         this.loading = false;
+        this.cdr.detectChanges();
       }
     });
   }

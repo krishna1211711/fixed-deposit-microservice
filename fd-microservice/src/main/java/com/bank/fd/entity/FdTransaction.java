@@ -19,7 +19,7 @@ public class FdTransaction {
     @Column(name = "txn_type")
     private String txnType;
 
-    @Column(name = "amount", precision = 18, scale = 2)
+    @Column(name = "amount", precision = 18, scale = 3)
     private BigDecimal amount;
 
     @Column(name = "currency")

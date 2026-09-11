@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fixed-deposit.example/schemas/fd-lifecycle-v1.schema.json",
+  "title": "Fixed Deposit Lifecycle Event v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "eventId", "occurredAt", "eventType", "customerId",
+    "fdAccountNo", "currency", "amount", "subject", "messageBody"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "eventId": { "type": "string", "format": "uuid" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "eventType": {
+      "enum": ["FD_OPENED", "INTEREST_ACCRUED", "FD_MATURED", "FD_WITHDRAWN"]
+    },
+    "customerId": { "type": "string", "minLength": 1 },
+    "fdAccountNo": { "type": "string", "minLength": 1 },
+    "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+    "amount": { "type": "number" },
+    "subject": { "type": "string", "minLength": 1 },
+    "messageBody": { "type": "string", "minLength": 1 }
+  }
+}

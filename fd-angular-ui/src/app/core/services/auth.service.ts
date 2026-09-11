@@ -9,7 +9,7 @@ import { User } from '../models/models';
   providedIn: 'root'
 })
 export class AuthService {
-  private apiUrl = 'http://localhost:8080/api/auth';
+  private apiUrl = '/api/auth';
   private tokenKey = 'fd_auth_token';
   
   private currentUserSubject = new BehaviorSubject<User | null>(null);
@@ -53,10 +53,11 @@ export class AuthService {
     if (token) {
       try {
         const decoded: any = jwtDecode(token);
+        const rawRoles = decoded.roles ?? (decoded.role ? [decoded.role] : []);
         const user: User = {
           username: decoded.sub,
           email: decoded.email || '',
-          roles: decoded.roles || []
+          roles: rawRoles.map((role: string) => role.replace(/^ROLE_/, ''))
         };
         this.currentUserSubject.next(user);
       } catch (e) {

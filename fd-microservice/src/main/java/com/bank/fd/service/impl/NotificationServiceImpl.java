@@ -22,7 +22,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationLogRepository notificationLogRepository;
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
 
-    @Value("${spring.mail.username:bankingtechmail@gmail.com}")
+    @Value("${app.notifications.from:noreply@fd-demo.local}")
     private String senderEmail;
 
     public NotificationServiceImpl(NotificationLogRepository notificationLogRepository,
@@ -37,10 +37,6 @@ public class NotificationServiceImpl implements NotificationService {
         notification.setEventType(eventType);
         notification.setChannel("EMAIL");
         notification.setMessageBody(messageBody);
-        notification.setStatus("SENT");
-        notification.setSentAt(LocalDateTime.now());
-        notificationLogRepository.save(notification);
-
         log.info("[NOTIFICATION] Event: {} | Customer: {} | Message: {}", eventType, customerId, messageBody);
 
         // Attempt actual email dispatch if JavaMailSender is configured with SMTP host
@@ -51,13 +47,19 @@ public class NotificationServiceImpl implements NotificationService {
                 mailMessage.setFrom(senderEmail);
                 mailMessage.setSubject(subject);
                 mailMessage.setText(messageBody);
-                mailMessage.setTo(customerId + "@bank.com");
+                mailMessage.setTo(customerId + "@fd-demo.local");
                 mailSender.send(mailMessage);
+                notification.setStatus("SENT");
+                notification.setSentAt(LocalDateTime.now());
                 log.info("[EMAIL SENT] Successfully dispatched email to customer: {}", customerId);
             } catch (Exception e) {
+                notification.setStatus("FAILED");
                 log.warn("[EMAIL NOTICE] Outbound SMTP skipped ({}) - notification safely written to audit log table", e.getMessage());
             }
+        } else {
+            notification.setStatus("LOGGED");
         }
+        notificationLogRepository.save(notification);
     }
 
     @Override

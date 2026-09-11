@@ -55,8 +55,20 @@ public class JwtValidationFilter extends AbstractGatewayFilterFactory<JwtValidat
                         .parseSignedClaims(token)
                         .getPayload();
                 
-                ServerHttpRequest modifiedRequest = request.mutate()
+                String role = claims.get("role", String.class);
+                String customerId = claims.get("customerId", String.class);
+                ServerHttpRequest.Builder requestBuilder = request.mutate()
+                        .headers(headers -> {
+                            headers.remove("X-User-Id");
+                            headers.remove("X-User-Role");
+                            headers.remove("X-Customer-Id");
+                        })
                         .header("X-User-Id", claims.getSubject())
+                        .header("X-User-Role", role == null ? "" : role);
+                if (customerId != null && !customerId.isBlank()) {
+                    requestBuilder.header("X-Customer-Id", customerId);
+                }
+                ServerHttpRequest modifiedRequest = requestBuilder
                         .build();
                 
                 return chain.filter(exchange.mutate().request(modifiedRequest).build());

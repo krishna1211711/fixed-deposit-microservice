@@ -83,7 +83,7 @@
           <tr *ngFor="let fd of recentFds" [routerLink]="['/fd', fd.fdAccountNo]" style="cursor: pointer;">
             <td><strong>{{ fd.fdAccountNo }}</strong></td>
             <td>{{ fd.principalAmount | currencyFormat:fd.currency }}</td>
-            <td>{{ fd.termMonths }} mo</td>
+            <td>{{ fd.tenureMonths }} mo</td>
             <td>
               <span class="badge" [ngClass]="{
                 'badge-active': fd.status === 'ACTIVE',

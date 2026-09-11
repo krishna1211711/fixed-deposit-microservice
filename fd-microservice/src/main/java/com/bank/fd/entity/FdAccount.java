@@ -24,7 +24,7 @@ public class FdAccount {
     @Column(name = "currency")
     private String currency = "INR";
 
-    @Column(name = "principal_amount", precision = 18, scale = 2)
+    @Column(name = "principal_amount", precision = 18, scale = 3)
     private BigDecimal principalAmount;
 
     @Column(name = "interest_rate", precision = 5, scale = 2)
@@ -42,7 +42,7 @@ public class FdAccount {
     @Column(name = "maturity_date")
     private LocalDate maturityDate;
 
-    @Column(name = "accrued_interest", precision = 18, scale = 2)
+    @Column(name = "accrued_interest", precision = 18, scale = 3)
     private BigDecimal accruedInterest = BigDecimal.ZERO;
 
     @Column(name = "created_at")

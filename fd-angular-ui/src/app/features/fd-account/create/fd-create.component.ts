@@ -49,7 +49,10 @@ export class FdCreateComponent implements OnInit {
   }
 
   onProductChange() {
-    this.selectedProduct = this.products.find(p => p.code === this.request.productCode) || null;
+    this.selectedProduct = this.products.find(p => p.productCode === this.request.productCode) || null;
+    if (this.selectedProduct) {
+      this.request.currency = this.selectedProduct.currency;
+    }
   }
 
   onSubmit() {

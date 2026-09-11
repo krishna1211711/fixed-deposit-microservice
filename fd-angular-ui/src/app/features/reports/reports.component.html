@@ -16,15 +16,15 @@
             <th>Product Code</th>
             <th>Total Accounts</th>
             <th>Total Principal</th>
-            <th>Average Rate</th>
+            <th>Interest Accrued</th>
           </tr>
         </thead>
         <tbody *ngIf="!loading">
           <tr *ngFor="let item of summaryData">
             <td><strong>{{ item.productCode }}</strong></td>
             <td>{{ item.totalAccounts }}</td>
-            <td>{{ item.totalPrincipalAmount | currencyFormat }}</td>
-            <td>{{ item.averageInterestRate | number:'1.2-2' }}%</td>
+            <td>{{ item.totalPrincipal | currencyFormat }}</td>
+            <td>{{ item.totalInterestAccrued | currencyFormat }}</td>
           </tr>
         </tbody>
       </table>

@@ -2,6 +2,7 @@ package com.bank.fd.service.impl;
 
 import com.bank.fd.entity.FdTransaction;
 import com.bank.fd.repository.FdTransactionRepository;
+import com.bank.fd.repository.FdAccountRepository;
 import com.bank.fd.service.FdTransactionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,9 +16,16 @@ import java.util.UUID;
 public class FdTransactionServiceImpl implements FdTransactionService {
 
     private final FdTransactionRepository transactionRepository;
+    private final FdAccountRepository accountRepository;
 
-    public FdTransactionServiceImpl(FdTransactionRepository transactionRepository) {
+    public FdTransactionServiceImpl(FdTransactionRepository transactionRepository,
+                                    FdAccountRepository accountRepository) {
         this.transactionRepository = transactionRepository;
+        this.accountRepository = accountRepository;
+    }
+
+    private String currencyFor(String fdAccountNo) {
+        return accountRepository.findById(fdAccountNo).map(a -> a.getCurrency()).orElse("INR");
     }
 
     @Override
@@ -42,7 +50,7 @@ public class FdTransactionServiceImpl implements FdTransactionService {
         txn.setFdAccountNo(fdAccountNo);
         txn.setTxnType("INTEREST_CREDIT");
         txn.setAmount(amount);
-        txn.setCurrency("INR");
+        txn.setCurrency(currencyFor(fdAccountNo));
         txn.setDebitGlAccount("EXPENSE_INTEREST_PAID");
         txn.setCreditGlAccount("LIABILITY_FD_DEPOSITS");
         txn.setStatus("COMPLETED");
@@ -58,7 +66,7 @@ public class FdTransactionServiceImpl implements FdTransactionService {
         txn.setFdAccountNo(fdAccountNo);
         txn.setTxnType("WITHDRAWAL");
         txn.setAmount(amount);
-        txn.setCurrency("INR");
+        txn.setCurrency(currencyFor(fdAccountNo));
         txn.setDebitGlAccount("LIABILITY_FD_DEPOSITS");
         txn.setCreditGlAccount("ASSET_CUSTOMER_SAVINGS");
         txn.setStatus("COMPLETED");
@@ -78,7 +86,7 @@ public class FdTransactionServiceImpl implements FdTransactionService {
         txn.setFdAccountNo(fdAccountNo);
         txn.setTxnType("PENALTY");
         txn.setAmount(penaltyAmount);
-        txn.setCurrency("INR");
+        txn.setCurrency(currencyFor(fdAccountNo));
         txn.setDebitGlAccount("LIABILITY_FD_DEPOSITS");
         txn.setCreditGlAccount("INCOME_PREMATURE_PENALTY");
         txn.setStatus("COMPLETED");
@@ -94,7 +102,7 @@ public class FdTransactionServiceImpl implements FdTransactionService {
         txn.setFdAccountNo(fdAccountNo);
         txn.setTxnType("MATURITY_PAYOUT");
         txn.setAmount(amount);
-        txn.setCurrency("INR");
+        txn.setCurrency(currencyFor(fdAccountNo));
         txn.setDebitGlAccount("LIABILITY_FD_DEPOSITS");
         txn.setCreditGlAccount("ASSET_CUSTOMER_SAVINGS");
         txn.setStatus("COMPLETED");

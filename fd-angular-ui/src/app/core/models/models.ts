@@ -10,8 +10,7 @@ export interface FdAccount {
   customerId: string;
   productCode: string;
   principalAmount: number;
-  termMonths: number;
-  branchCode: string;
+  tenureMonths: number;
   currency: string;
   status: 'ACTIVE' | 'CLOSED' | 'PREMATURE_CLOSED';
   maturityDate: string;
@@ -20,31 +19,36 @@ export interface FdAccount {
 }
 
 export interface Product {
-  code: string;
-  name: string;
-  baseRate: number;
-  compoundingFrequency: 'MONTHLY' | 'QUARTERLY' | 'HALF_YEARLY' | 'YEARLY';
-  calculationType: 'SIMPLE' | 'COMPOUND';
+  productCode: string;
+  productName: string;
+  productType: string;
+  currency: string;
+  minRate: number;
+  maxRate: number;
+  minDeposit: number;
+  minTermMonths: number;
+  maxTermMonths: number;
+  compoundingFrequency: 'MONTHLY' | 'QUARTERLY' | 'HALFYEARLY' | 'YEARLY';
 }
 
 export interface Transaction {
-  transactionId: string;
+  txnId: number;
   fdAccountNo: string;
   amount: number;
-  type: string;
-  timestamp: string;
+  txnType: string;
+  txnTimestamp: string;
   remarks: string;
 }
 
 export interface Statement {
-  date: string;
+  statementDate: string;
   openingBalance: number;
   interestCredited: number;
   closingBalance: number;
 }
 
 export interface FdSimulationRequest {
-  principalAmount: number;
+  principal: number;
   termMonths: number;
   baseRate: number;
   compoundingFrequency: string;

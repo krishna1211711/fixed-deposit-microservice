@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
 import { ReportService } from '../../core/services/report.service';
@@ -19,7 +19,8 @@ export class ReportsComponent implements OnInit {
 
   constructor(
     public authService: AuthService,
-    private reportService: ReportService
+    private reportService: ReportService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -30,19 +31,32 @@ export class ReportsComponent implements OnInit {
     this.loading = true;
     if (this.authService.isCustomer()) {
       this.reportService.getPortfolio().subscribe({
-        next: (data) => {
-          this.portfolioData = data;
+        next: (data: any[]) => {
+          const accounts = Array.isArray(data) ? data : [];
+          this.portfolioData = {
+            totalInvestments: accounts.reduce((sum, item) => sum + Number(item.principalAmount || 0), 0),
+            totalInterestEarned: accounts.reduce((sum, item) => sum + Number(item.accruedInterest || 0), 0),
+            activeAccountsCount: accounts.filter(item => item.status === 'ACTIVE').length
+          };
           this.loading = false;
+          this.cdr.detectChanges();
         },
-        error: () => this.loading = false
+        error: () => {
+          this.loading = false;
+          this.cdr.detectChanges();
+        }
       });
     } else {
       this.reportService.getFdSummary().subscribe({
         next: (data) => {
           this.summaryData = data;
           this.loading = false;
+          this.cdr.detectChanges();
         },
-        error: () => this.loading = false
+        error: () => {
+          this.loading = false;
+          this.cdr.detectChanges();
+        }
       });
     }
   }

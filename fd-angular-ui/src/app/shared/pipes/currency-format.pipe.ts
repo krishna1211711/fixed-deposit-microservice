@@ -11,16 +11,14 @@ export class CurrencyFormatPipe implements PipeTransform {
     const num = typeof value === 'string' ? parseFloat(value) : value;
     if (isNaN(num)) return String(value);
 
-    if (currency === 'INR') {
-      return new Intl.NumberFormat('en-IN', {
-        style: 'currency',
-        currency: 'INR'
-      }).format(num);
-    } else {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD'
-      }).format(num);
-    }
+    const localeByCurrency: Record<string, string> = {
+      INR: 'en-IN', USD: 'en-US', EUR: 'de-DE', GBP: 'en-GB',
+      JPY: 'ja-JP', AED: 'en-AE', KWD: 'en-KW'
+    };
+    const normalizedCurrency = currency.toUpperCase();
+    return new Intl.NumberFormat(localeByCurrency[normalizedCurrency] || 'en-US', {
+      style: 'currency',
+      currency: normalizedCurrency
+    }).format(num);
   }
 }

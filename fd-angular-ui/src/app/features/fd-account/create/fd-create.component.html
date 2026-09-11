@@ -22,7 +22,7 @@
         <label class="form-label">{{ 'fdAccount.productCode' | translate }}</label>
         <select class="form-control" name="productCode" [(ngModel)]="request.productCode" (change)="onProductChange()" required>
           <option value="">Select a Product</option>
-          <option *ngFor="let p of products" [value]="p.code">{{ p.name }} ({{ p.baseRate }}%)</option>
+          <option *ngFor="let p of products" [value]="p.productCode">{{ p.productName }} — {{ p.currency }} ({{ p.minRate }}–{{ p.maxRate }}%)</option>
         </select>
       </div>
 
@@ -34,10 +34,7 @@
         
         <div class="form-group">
           <label class="form-label">{{ 'fdAccount.currency' | translate }}</label>
-          <select class="form-control" name="currency" [(ngModel)]="request.currency">
-            <option value="INR">INR (₹)</option>
-            <option value="USD">USD ($)</option>
-          </select>
+          <input class="form-control" name="currency" [(ngModel)]="request.currency" readonly>
         </div>
       </div>
 
@@ -54,10 +51,10 @@
       </div>
 
       <div class="product-preview mt-4 p-4 mb-4" *ngIf="selectedProduct">
-        <h4 class="text-primary mb-2">{{ selectedProduct.name }}</h4>
+        <h4 class="text-primary mb-2">{{ selectedProduct.productName }}</h4>
         <div class="flex justify-between text-sm">
-          <span class="text-muted">Base Rate: <strong class="text-main">{{ selectedProduct.baseRate }}%</strong></span>
-          <span class="text-muted">Type: <strong class="text-main">{{ selectedProduct.calculationType }}</strong></span>
+          <span class="text-muted">Rate: <strong class="text-main">{{ selectedProduct.minRate }}–{{ selectedProduct.maxRate }}%</strong></span>
+          <span class="text-muted">Currency: <strong class="text-main">{{ selectedProduct.currency }}</strong></span>
         </div>
       </div>
 

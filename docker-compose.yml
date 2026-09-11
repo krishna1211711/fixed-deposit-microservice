@@ -1,16 +1,44 @@
-version: '3.8'
-
 services:
+  kafka:
+    image: apache/kafka:3.9.1
+    container_name: fd-kafka
+    ports:
+      - "29092:29092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: CONTROLLER://:9093,PLAINTEXT://:9092,PLAINTEXT_HOST://:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+
   mysql:
     image: mysql:8.0
     container_name: fd-mysql
-    ports:
-      - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: root123
-      MYSQL_DATABASE: fd_bank_db
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-fd_root_demo_password}
+      MYSQL_DATABASE: ${DB_NAME:-fd_bank_db}
+      MYSQL_USER: ${DB_USERNAME:-fd_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-fd_demo_password}
     volumes:
       - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-fd_root_demo_password}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   fd-service:
     build: ./fd-microservice
@@ -18,12 +46,27 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+      kafka:
+        condition: service_healthy
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/fd_bank_db?useSSL=false&serverTimezone=UTC
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=root123
-      - JWT_SECRET=fd-microservice-jwt-secret-key-that-is-at-least-256-bits-long-for-HS256
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${DB_NAME:-fd_bank_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-fd_user}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-fd_demo_password}
+      JWT_SECRET: ${JWT_SECRET:-fd-local-demo-secret-change-before-any-real-deployment}
+      SPRING_MAIL_HOST: mailpit
+      SPRING_MAIL_PORT: 1025
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      APP_EVENTS_KAFKA_ENABLED: "true"
+      FD_EVENTS_TOPIC: fd.lifecycle.v1
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
 
   gateway:
     build: ./api-gateway
@@ -31,10 +74,14 @@ services:
     ports:
       - "9090:9090"
     depends_on:
-      - fd-service
+      fd-service:
+        condition: service_healthy
+      report-service:
+        condition: service_healthy
     environment:
-      - JWT_SECRET=fd-microservice-jwt-secret-key-that-is-at-least-256-bits-long-for-HS256
-      - FD_SERVICE_URI=http://fd-service:8080
+      JWT_SECRET: ${JWT_SECRET:-fd-local-demo-secret-change-before-any-real-deployment}
+      FD_SERVICE_URI: http://fd-service:8080
+      REPORT_SERVICE_URI: http://report-service:5000
 
   angular-ui:
     build: ./fd-angular-ui
@@ -42,19 +89,64 @@ services:
     ports:
       - "4200:80"
     depends_on:
-      - gateway
+      gateway:
+        condition: service_started
 
   report-service:
     build: ./report-service
     container_name: report-service
+    expose:
+      - "5000"
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     environment:
-      - DB_HOST=mysql
-      - DB_PORT=3306
-      - DB_USER=root
-      - DB_PASSWORD=root123
-      - DB_NAME=fd_bank_db
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: ${DB_USERNAME:-fd_user}
+      DB_PASSWORD: ${DB_PASSWORD:-fd_demo_password}
+      DB_NAME: ${DB_NAME:-fd_bank_db}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  notification-service:
+    build: ./notification-service
+    container_name: fd-notification-service
+    expose:
+      - "5001"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      FD_EVENTS_TOPIC: fd.lifecycle.v1
+      KAFKA_CONSUMER_GROUP: fd-notification-service-v1
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: ${DB_USERNAME:-fd_user}
+      DB_PASSWORD: ${DB_PASSWORD:-fd_demo_password}
+      DB_NAME: ${DB_NAME:-fd_bank_db}
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    container_name: fd-mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
 
 volumes:
   mysql-data:

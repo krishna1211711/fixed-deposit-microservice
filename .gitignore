@@ -1,0 +1,33 @@
+# Java/Maven
+**/target/
+.m2/
+
+# Angular/Node
+**/node_modules/
+**/.angular/
+**/dist/
+npm-debug.log*
+**/__pycache__/
+*.py[cod]
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+k8s/secret.yaml
+
+# Editors and OS files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Test and runtime output
+coverage/
+logs/
+*.log
+reports/generated/
+demo/output/
+.artifact-build/
+tmp/

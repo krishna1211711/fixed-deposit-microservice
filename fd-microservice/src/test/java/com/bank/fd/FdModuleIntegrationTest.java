@@ -140,8 +140,8 @@ class FdModuleIntegrationTest {
     }
 
     @Test
-    @DisplayName("Public FD Calculator Simulation - No Auth Required")
-    void testPublicFdCalculator() throws Exception {
+    @DisplayName("Authenticated customer can use the manual-compatible FD calculator endpoint")
+    void testAuthenticatedFdCalculator() throws Exception {
         FdCalculateRequest req = new FdCalculateRequest();
         req.setPrincipal(new BigDecimal("50000.00"));
         req.setBaseRate(new BigDecimal("6.50"));
@@ -149,7 +149,8 @@ class FdModuleIntegrationTest {
         req.setCompoundingFrequency("QUARTERLY");
         req.setCategories(List.of("SENIOR_CITIZEN")); // +0.50% -> 7.00%
 
-        MvcResult result = mockMvc.perform(post("/api/fd/calculator/simulate")
+        MvcResult result = mockMvc.perform(post("/api/fd/calculate")
+                .header("Authorization", "Bearer " + customerToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
@@ -160,6 +161,11 @@ class FdModuleIntegrationTest {
         assertEquals(new BigDecimal("7.00"), res.getEffectiveRate());
         assertTrue(res.getInterestEarned().compareTo(BigDecimal.ZERO) > 0);
         assertTrue(res.getMaturityAmount().compareTo(new BigDecimal("50000.00")) > 0);
+
+        mockMvc.perform(post("/api/fd/calculate")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -234,7 +240,7 @@ class FdModuleIntegrationTest {
         WithdrawalResponse withdrawalResponse = objectMapper.readValue(
                 withdrawResult.getResponse().getContentAsString(), WithdrawalResponse.class);
         assertEquals("PREMATURE_CLOSED", withdrawalResponse.getStatus());
-        assertEquals(new BigDecimal("100000.00"), withdrawalResponse.getPrincipalReturned());
+        assertEquals(0, new BigDecimal("100000.00").compareTo(withdrawalResponse.getPrincipalReturned()));
         assertTrue(withdrawalResponse.getPenaltyApplied().compareTo(BigDecimal.ZERO) >= 0);
 
         // Step 6: Verify Summary Report as Bank Officer

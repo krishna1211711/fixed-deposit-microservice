@@ -32,8 +32,10 @@ spec:
           env:
             - name: JWT_SECRET
               valueFrom:
-                configMapKeyRef:
-                  name: fd-config
+                secretKeyRef:
+                  name: fd-secret
                   key: JWT_SECRET
             - name: FD_SERVICE_URI
               value: "http://fd-service:8080"
+            - name: REPORT_SERVICE_URI
+              value: "http://report-service:5000"

@@ -7,6 +7,7 @@ import com.bank.fd.entity.Product;
 import com.bank.fd.event.EventPublisher;
 import com.bank.fd.exception.InvalidOperationException;
 import com.bank.fd.repository.FdAccountRepository;
+import com.bank.fd.repository.FdStatementRepository;
 import com.bank.fd.service.impl.WithdrawalServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,8 @@ class WithdrawalServiceTest {
     private FdTransactionService transactionService;
     @Mock
     private EventPublisher eventPublisher;
+    @Mock
+    private FdStatementRepository statementRepository;
 
     @InjectMocks
     private WithdrawalServiceImpl withdrawalService;

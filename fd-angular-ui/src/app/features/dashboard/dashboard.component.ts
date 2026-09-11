@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
@@ -28,7 +28,8 @@ export class DashboardComponent implements OnInit {
   constructor(
     public authService: AuthService,
     private fdService: FdAccountService,
-    private reportService: ReportService
+    private reportService: ReportService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -44,25 +45,34 @@ export class DashboardComponent implements OnInit {
           this.recentFds = accounts.slice(0, 5);
           this.calculateSummary(accounts);
           this.loading = false;
+          this.cdr.detectChanges();
         },
-        error: () => this.loading = false
+        error: () => {
+          this.loading = false;
+          this.cdr.detectChanges();
+        }
       });
     } else {
       this.reportService.getFdSummary().subscribe({
         next: (data) => {
           if (data && data.length > 0) {
             this.summary.totalAccounts = data.reduce((sum: number, item: any) => sum + item.totalAccounts, 0);
-            this.summary.totalPrincipal = data.reduce((sum: number, item: any) => sum + item.totalPrincipalAmount, 0);
+            this.summary.totalPrincipal = data.reduce((sum: number, item: any) => sum + Number(item.totalPrincipal || 0), 0);
             this.summary.activeAccounts = this.summary.totalAccounts; // Approximate for admin view
           }
           this.loading = false;
+          this.cdr.detectChanges();
         },
-        error: () => this.loading = false
+        error: () => {
+          this.loading = false;
+          this.cdr.detectChanges();
+        }
       });
       
       this.fdService.getAllAccounts().subscribe({
         next: (accounts) => {
           this.recentFds = accounts.slice(0, 5);
+          this.cdr.detectChanges();
         }
       });
     }

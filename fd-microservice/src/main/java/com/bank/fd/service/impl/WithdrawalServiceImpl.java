@@ -3,11 +3,13 @@ package com.bank.fd.service.impl;
 import com.bank.fd.dto.request.WithdrawalRequest;
 import com.bank.fd.dto.response.WithdrawalResponse;
 import com.bank.fd.entity.FdAccount;
+import com.bank.fd.entity.FdStatement;
 import com.bank.fd.entity.Product;
 import com.bank.fd.event.EventPublisher;
 import com.bank.fd.exception.FdNotFoundException;
 import com.bank.fd.exception.InvalidOperationException;
 import com.bank.fd.repository.FdAccountRepository;
+import com.bank.fd.repository.FdStatementRepository;
 import com.bank.fd.service.FdTransactionService;
 import com.bank.fd.service.InterestEngineService;
 import com.bank.fd.service.ProductService;
@@ -28,17 +30,20 @@ public class WithdrawalServiceImpl implements WithdrawalService {
     private final InterestEngineService interestEngineService;
     private final FdTransactionService transactionService;
     private final EventPublisher eventPublisher;
+    private final FdStatementRepository statementRepository;
 
     public WithdrawalServiceImpl(FdAccountRepository accountRepository,
                                  ProductService productService,
                                  InterestEngineService interestEngineService,
                                  FdTransactionService transactionService,
-                                 EventPublisher eventPublisher) {
+                                 EventPublisher eventPublisher,
+                                 FdStatementRepository statementRepository) {
         this.accountRepository = accountRepository;
         this.productService = productService;
         this.interestEngineService = interestEngineService;
         this.transactionService = transactionService;
         this.eventPublisher = eventPublisher;
+        this.statementRepository = statementRepository;
     }
 
     @Override
@@ -54,9 +59,18 @@ public class WithdrawalServiceImpl implements WithdrawalService {
                 ? request.getWithdrawalDate()
                 : LocalDate.now();
 
+        LocalDate openingDate = account.getCreatedAt().toLocalDate();
+        if (withdrawalDate.isBefore(openingDate)) {
+            throw new InvalidOperationException("Withdrawal date cannot be before FD opening date: " + openingDate);
+        }
+        if (account.getMaturityDate() != null && !withdrawalDate.isBefore(account.getMaturityDate())) {
+            throw new InvalidOperationException(
+                    "Premature withdrawal date must be before maturity date: " + account.getMaturityDate());
+        }
+
         // Calculate interest accrued from account opening up to the withdrawal date
         BigDecimal accruedInterest = interestEngineService.calculateAccruedInterestForPeriod(
-                account, account.getCreatedAt().toLocalDate(), withdrawalDate);
+                account, openingDate, withdrawalDate);
 
         Product product = productService.getProduct(account.getProductCode());
         BigDecimal penaltyPct = product.getPreMaturityPenaltyPct() != null
@@ -81,6 +95,16 @@ public class WithdrawalServiceImpl implements WithdrawalService {
         if (penaltyAmount.compareTo(BigDecimal.ZERO) > 0) {
             transactionService.recordPenaltyDeduction(account.getFdAccountNo(), penaltyAmount);
         }
+
+        FdStatement finalStatement = statementRepository
+                .findByFdAccountNoAndStatementDate(account.getFdAccountNo(), withdrawalDate)
+                .orElseGet(FdStatement::new);
+        finalStatement.setFdAccountNo(account.getFdAccountNo());
+        finalStatement.setStatementDate(withdrawalDate);
+        finalStatement.setOpeningBalance(account.getPrincipalAmount());
+        finalStatement.setInterestCredited(netInterest);
+        finalStatement.setClosingBalance(netPayout);
+        statementRepository.save(finalStatement);
 
         eventPublisher.publishFdWithdrawn(account.getFdAccountNo(), account.getCustomerId(),
                 netPayout, penaltyAmount);

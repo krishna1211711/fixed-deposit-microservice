@@ -5,6 +5,7 @@ import com.bank.fd.entity.FdAccount;
 import com.bank.fd.event.EventPublisher;
 import com.bank.fd.exception.InvalidOperationException;
 import com.bank.fd.repository.FdAccountRepository;
+import com.bank.fd.repository.FdStatementRepository;
 import com.bank.fd.service.impl.MaturityServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,8 @@ class MaturityServiceTest {
     private FdTransactionService transactionService;
     @Mock
     private EventPublisher eventPublisher;
+    @Mock
+    private FdStatementRepository statementRepository;
 
     @InjectMocks
     private MaturityServiceImpl maturityService;
