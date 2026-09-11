@@ -1,0 +1,115 @@
+<div class="detail-container animate-fade-in" *ngIf="!loading && account">
+  
+  <div class="header-section flex justify-between items-center mb-4">
+    <h2>Account {{ account.fdAccountNo }}</h2>
+    <div class="status-badge">
+      <span class="badge" [ngClass]="{
+        'badge-active': account.status === 'ACTIVE',
+        'badge-closed': account.status === 'CLOSED',
+        'badge-warning': account.status === 'PREMATURE_CLOSED'
+      }">{{ account.status }}</span>
+    </div>
+  </div>
+
+  <div class="actions-bar mb-4 flex gap-4">
+    <a *ngIf="account.status === 'ACTIVE'" [routerLink]="['/fd', account.fdAccountNo, 'withdraw']" class="btn btn-primary">{{ 'fdAccount.withdraw' | translate }}</a>
+    <a [routerLink]="['/statements', account.fdAccountNo]" class="btn btn-outline">{{ 'fdAccount.statements' | translate }}</a>
+  </div>
+
+  <div class="tabs mb-4">
+    <button class="tab-btn" [class.active]="activeTab === 'overview'" (click)="setTab('overview')">Overview</button>
+    <button class="tab-btn" [class.active]="activeTab === 'transactions'" (click)="setTab('transactions')">{{ 'fdAccount.transactions' | translate }}</button>
+  </div>
+
+  <div class="tab-content" *ngIf="activeTab === 'overview'">
+    <div class="glass-card animate-slide-up">
+      <div class="grid grid-cols-2 gap-4">
+        
+        <div class="detail-group">
+          <label class="text-muted">Principal Amount</label>
+          <div class="value large text-accent">{{ account.principalAmount | currencyFormat:account.currency }}</div>
+        </div>
+        
+        <div class="detail-group">
+          <label class="text-muted">Interest Rate</label>
+          <div class="value large">{{ account.interestRate }}%</div>
+        </div>
+
+        <div class="detail-group">
+          <label class="text-muted">Customer ID</label>
+          <div class="value">{{ account.customerId }}</div>
+        </div>
+
+        <div class="detail-group">
+          <label class="text-muted">Product Code</label>
+          <div class="value">{{ account.productCode }}</div>
+        </div>
+        
+        <div class="detail-group">
+          <label class="text-muted">Term</label>
+          <div class="value">{{ account.termMonths }} Months</div>
+        </div>
+        
+        <div class="detail-group">
+          <label class="text-muted">Maturity Date</label>
+          <div class="value">{{ account.maturityDate | date:'mediumDate' }}</div>
+        </div>
+        
+        <div class="detail-group">
+          <label class="text-muted">Created At</label>
+          <div class="value">{{ account.createdAt | date:'medium' }}</div>
+        </div>
+        
+        <div class="detail-group">
+          <label class="text-muted">Branch Code</label>
+          <div class="value">{{ account.branchCode }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" *ngIf="activeTab === 'transactions'">
+    <div class="glass-card animate-slide-up">
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Amount</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let tx of transactions">
+              <td>{{ tx.timestamp | date:'medium' }}</td>
+              <td>
+                <span class="badge" [ngClass]="{
+                  'badge-active': tx.type === 'CREDIT',
+                  'badge-warning': tx.type === 'DEBIT'
+                }">{{ tx.type }}</span>
+              </td>
+              <td [ngClass]="tx.type === 'CREDIT' ? 'text-success' : 'text-danger'">
+                {{ tx.type === 'CREDIT' ? '+' : '-' }}{{ tx.amount | currencyFormat:account.currency }}
+              </td>
+              <td>{{ tx.remarks }}</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <div *ngIf="transactions.length === 0" class="text-center p-4 text-muted">
+          No transactions found.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="text-center p-4" *ngIf="loading">
+  <div class="animate-pulse">{{ 'common.loading' | translate }}</div>
+</div>
+
+<div class="text-center p-4 text-danger" *ngIf="error">
+  {{ error }}
+</div>

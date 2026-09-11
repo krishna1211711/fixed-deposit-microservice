@@ -1,0 +1,34 @@
+<div class="auth-container">
+  <div class="auth-card glass-card animate-fade-in">
+    <div class="auth-header">
+      <div class="logo-icon"></div>
+      <h2>{{ 'nav.title' | translate }}</h2>
+      <p class="subtitle">{{ 'auth.login' | translate }}</p>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
+      <div class="form-group">
+        <label class="form-label" for="username">{{ 'auth.username' | translate }}</label>
+        <input type="text" id="username" name="username" class="form-control" [(ngModel)]="credentials.username" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">{{ 'auth.password' | translate }}</label>
+        <input type="password" id="password" name="password" class="form-control" [(ngModel)]="credentials.password" required>
+      </div>
+
+      <div class="error-msg text-danger mt-4" *ngIf="error">
+        {{ error }}
+      </div>
+
+      <button type="submit" class="btn btn-primary w-full mt-4" [disabled]="!loginForm.form.valid || loading">
+        <span *ngIf="!loading">{{ 'auth.loginBtn' | translate }}</span>
+        <span *ngIf="loading">{{ 'common.loading' | translate }}</span>
+      </button>
+    </form>
+
+    <div class="auth-footer text-center mt-4">
+      <a routerLink="/register">{{ 'auth.noAccount' | translate }}</a>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,212 @@
+Banking Technology Lab
+Compiled By,
+Dr. Prakash K. Aithal
+
+5
+Banking technology Lab
+Definition
+As part of the Banking Technology lab, students will develop 
+multiple small applications related to the banking domain. 
+Integrating these applications, which will be built and deployed 
+in the Cloud using Azure App Service. 
+The outcome of this lab would be a fully functional banking 
+application that is hosted on the cloud. 
+The lab would comprise the following Modules:
+•
+Product and Pricing
+•
+Fixed Deposit Calculator
+•
+Fixed Deposit Module →
+•
+Account creation – Fixed Deposit (Liability Class)
+•
+Interest calculation, capitalization, and interest payouts
+•
+Maturity Calculations
+•
+Pre-Maturity Withdrawal
+•
+Reports – Customer communication, Operational reports, 
+Compliance reports, etc.
+•
+Customer → Account Portfolio in Customer module 
+developed in Fintech. Integrate with the Fixed Deposit 
+account module.
+Technology Stack
+•
+Development environment: Dev Containers, 
+•
+Docker and Kubernetes
+•
+Java Technologies – Core Java, Java Script,  Spring boot, 
+Angular, HTML, CSS
+•
+SQL on MYSQL
+•
+Python
+Learnings from Fintech lab to be put in use
+•
+Apply the basic concepts learnt in Fintech Labs
+•
+Apply the technology and architecture patterns learnt in Fintech 
+Lab
+•
+Apply the authorization pattern learnt in Fintech
+•
+Use the Customer module and integrate with the Accounts 
+module from Banking Technology Lab
+•
+API’s, DB, UI, Reports to be built as defined in Fintech Lab
+
+6
+Banking technology Lab
+Learning from Banking Technology Lab
+•
+How different modules can be developed independently and integrated
+•
+Admin Function vs Bank User Functions
+•
+FD Calculations and its variations(Simple and Compounding): building simulators
+•
+Account Life cycles and processes: Fixed Deposit
+•
+Creation, Interest calculation, Payouts, Pre-processes, Maturity processing, Closure, etc.
+•
+Time travel testing: Testing through different life cycles of an account
+•
+Processes in Batch processing: Interest calculation, statement generation, Maturity processing, etc.
+•
+Different transaction types, balance types for different product/account types
+•
+Debit/Credit, Asset/ Liability Classification, and GL transactions and aggregation
+•
+Customer communication, Bank operational communication, Compliance Communication, etc.
+
+7
+Banking technology Lab
+Learning from Banking Technology Lab
+•
+Authorization and Authentication, JWT token, → Use open source like Bcrypt for authentication
+•
+Double-byte character set, usage of Index, ISO standards, Standard formats like Amount format
+•
+Caching, Hashing, Defining the rules and regulations
+•
+API, Events, and File extract.
+•
+API Backward compatibility
+•
+Event publishing →Event – Driven API
+•
+File extract
+•
+Batch Processing
+•
+Logging and code Scanning
+•
+Elasticity → Scaling up of Pods
+
+8
+Banking Technology Lab
+Modules – User Registration and Banking Application 
+User Registration and Banking System → Admin function
+• Application to register a user 
+•
+Encryption and Decryption of the password using salt and hashing
+•
+Register the user in the Customer Module and use the customer ID as a User.
+•
+Multiple user ID options, e-mail, and phone number can be used instead of the 
+customer ID.
+•
+Use of a strong password policy like minimum length of 8, with at least 1 number, 1 
+special character, and 1 Capital letter.
+• Application to verify the user and allow access to the system
+• Both the User-ID and password must be entered to log in successfully.
+• Integrated system consisting of Customer, Product and Pricing, Fixed Deposit 
+Calculator, Fixed Deposit, Report Modules
+• SSO for all applications, each application should be able to log in and work 
+independently
+• Set a limit to auto logoff if the page is idle for a predefined time. E.g. 5 minutes
+
+9
+Banking technology Lab
+Modules – Product and Pricing
+Product and Pricing → Admin function 
+Define products offered by banks like CASA, TD, Unsecured Loan, etc. 
+Defining business rules,  guiding behaviors, roles, relationships, etc for the products
+A generic way of designing an application to accommodate a varied set of values.
+Functionality with a few of the business rules -  minimum age, Term for Deposits, Deposit 
+and Withdrawal Amount limits, etc.
+Different Life cycle statuses for different product types 
+Different interest types(Debit for Loans/Credit for Deposits) for different product types. 
+Different rates based on customer attributes like Senior citizen, Employee, etc.
+Different types of Fees – Periodic, one-time, event-based fee(e.g. Withdrawal from ATM), 
+etc.
+Different balance types, transaction types for different products.
+Understand how business rules are defined and built.
+Defaulting of product definition on accounts, resetting of values on the account, 
+etc.E.g. Term, amount, etc., on an FD account.
+
+10
+Banking technology Lab
+Modules – Fixed Deposit Calculator
+FD Calculator → Bank user function
+Define a module that takes Amount, tenure, interest rate, start date and calculates 
+the Maturity values of amount and date for a Fixed Deposit.
+Interest calculation when 
+• Compounding at different frequencies
+• Paid out on a regular basis, like Monthly, quarterly, etc.
+Calculate APY
+Integrate with the product module to fetch the required details from the product 
+when the product code is provided.
+Cache the rate information and retain it till logged out.
+
+11
+Banking technology Lab
+Modules – Fixed deposit Account Module
+Fixed Deposit Account Module → Bank User function
+•
+This module needs to be integrated with the following:
+•
+Product to get the product details
+•
+FD calculator Module
+•
+Customer Module
+•
+Store the default value from the product and create the account → . Calculate 
+maturity values using the FD Calculator
+•
+Change some values on account (from what is defined on the product) store the 
+details; calculate maturity values using the FD Calculator
+•
+Based on customer type, application of different rates → Students, Senior citizens, 
+Employees of the bank etc. have different rates
+•
+Transaction on the account → Initial deposit – Credit transaction, Early withdrawal 
+leading to reduced interest, Withdrawal on Maturity, interest payouts.
+•
+Batch for interest Calculation, Statements, Capitalization and payout of Interest,  
+Maturity processing
+•
+Customer communication through (Email, Alert) FDR during account creation, 
+transaction alerts,  interest processing, Maturity Notice, etc.
+•
+Operational reports → Total Liability, Monthly growth, etc.
+•
+Compliance reports
+We can demo the below to the students: 
+• Product and pricing design, product and pricing 
+defined for TD
+• Time travel of the account → Creation, Interest 
+Processing, Pre-closure, Maturity, renewal, etc.
+• Interest processing on the account
+• Maturity processing on the account
+• Tax implications and compliance, etc.
+• Internal accounts – double bookkeeping
+• GL Transactions 
+• Business Event-based design
+• Event publishing and usage of events
+• Reports and Extracts 

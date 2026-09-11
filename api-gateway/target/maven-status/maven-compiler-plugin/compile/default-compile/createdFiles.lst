@@ -1,0 +1,5 @@
+com\bank\gateway\GatewayApplication.class
+com\bank\gateway\config\RateLimiterConfig.class
+com\bank\gateway\config\JwtValidationFilter.class
+com\bank\gateway\config\GatewayRoutesConfig.class
+com\bank\gateway\config\JwtValidationFilter$Config.class

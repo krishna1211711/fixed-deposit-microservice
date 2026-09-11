@@ -1,0 +1,61 @@
+<div class="withdraw-container animate-fade-in">
+  <div class="header-section mb-4 flex justify-between items-center">
+    <h2>Withdraw Fixed Deposit</h2>
+    <a [routerLink]="['/fd', request.fdAccountNo]" class="btn btn-outline">{{ 'common.cancel' | translate }}</a>
+  </div>
+
+  <div class="alert alert-success" *ngIf="successMessage">
+    {{ successMessage }}
+  </div>
+
+  <div class="grid grid-cols-2 gap-4" *ngIf="account && !successMessage">
+    
+    <!-- Info Panel -->
+    <div class="glass-card animate-slide-up">
+      <h3 class="mb-4">Account Summary</h3>
+      
+      <div class="summary-item">
+        <span class="label">Principal Amount</span>
+        <span class="value">{{ account.principalAmount | currencyFormat:account.currency }}</span>
+      </div>
+      
+      <div class="summary-item">
+        <span class="label">Interest Rate</span>
+        <span class="value">{{ account.interestRate }}%</span>
+      </div>
+      
+      <div class="summary-item">
+        <span class="label">Maturity Date</span>
+        <span class="value">{{ account.maturityDate | date:'longDate' }}</span>
+      </div>
+      
+      <div class="alert alert-warning mt-4">
+        <div class="icon">!</div>
+        <div>Premature withdrawal will result in a penalty on the interest earned according to bank policy.</div>
+      </div>
+    </div>
+
+    <!-- Form Panel -->
+    <div class="glass-card animate-slide-up" style="animation-delay: 0.1s;">
+      <form (ngSubmit)="onSubmit()" #withdrawForm="ngForm">
+        
+        <div class="form-group">
+          <label class="form-label">Transfer to Account No.</label>
+          <input type="text" class="form-control" name="targetAccount" [(ngModel)]="request.targetAccountNo" required minlength="8">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Remarks</label>
+          <textarea class="form-control" name="remarks" [(ngModel)]="request.remarks" rows="3"></textarea>
+        </div>
+
+        <div class="text-danger mb-4 text-center" *ngIf="error">{{ error }}</div>
+
+        <button type="submit" class="btn btn-danger w-full mt-4" [disabled]="!withdrawForm.valid || loading">
+          {{ loading ? ('common.loading' | translate) : 'Confirm Withdrawal' }}
+        </button>
+      </form>
+    </div>
+
+  </div>
+</div>

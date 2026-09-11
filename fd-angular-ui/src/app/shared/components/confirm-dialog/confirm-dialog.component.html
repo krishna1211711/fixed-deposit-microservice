@@ -1,0 +1,14 @@
+<div class="dialog-overlay animate-fade-in" *ngIf="isOpen">
+  <div class="dialog-content glass-card animate-slide-up">
+    <div class="dialog-header">
+      <h3>{{ title }}</h3>
+    </div>
+    <div class="dialog-body">
+      <p>{{ message }}</p>
+    </div>
+    <div class="dialog-footer flex justify-center gap-4 mt-4">
+      <button class="btn btn-outline" (click)="onCancel()">Cancel</button>
+      <button class="btn btn-danger" (click)="onConfirm()">Confirm</button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,86 @@
+{
+  "nav": {
+    "title": "Banking FD System",
+    "dashboard": "Dashboard",
+    "fdCalculator": "FD Calculator",
+    "myFds": "My FDs",
+    "allFds": "All FDs",
+    "createFd": "Create FD",
+    "batchControl": "Batch Control",
+    "timeTravel": "Time Travel",
+    "reports": "Reports",
+    "logout": "Logout"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "username": "Username",
+    "password": "Password",
+    "email": "Email",
+    "loginBtn": "Sign In",
+    "registerBtn": "Sign Up",
+    "noAccount": "Don't have an account? Register here.",
+    "haveAccount": "Already have an account? Login here."
+  },
+  "dashboard": {
+    "welcome": "Welcome back, {{name}}",
+    "totalFds": "Total FDs",
+    "totalPrincipal": "Total Principal",
+    "totalInterest": "Total Interest Earned",
+    "activeFds": "Active FDs",
+    "recentFds": "Recent Fixed Deposits"
+  },
+  "fdCalc": {
+    "title": "FD Calculator",
+    "principal": "Principal Amount",
+    "term": "Term (Months)",
+    "baseRate": "Base Rate (%)",
+    "compounding": "Compounding Frequency",
+    "calcType": "Calculation Type",
+    "simple": "Simple Interest",
+    "compound": "Compound Interest",
+    "categories": "Categories",
+    "seniorCitizen": "Senior Citizen",
+    "employee": "Bank Employee",
+    "premium": "Premium Customer",
+    "calculate": "Calculate",
+    "result": "Calculation Result",
+    "maturityAmount": "Maturity Amount",
+    "interestEarned": "Interest Earned",
+    "effectiveRate": "Effective Rate"
+  },
+  "fdAccount": {
+    "create": "Create FD Account",
+    "accountNo": "Account Number",
+    "customerId": "Customer ID",
+    "productCode": "Product Code",
+    "principalAmount": "Principal Amount",
+    "termMonths": "Term (Months)",
+    "branchCode": "Branch Code",
+    "currency": "Currency",
+    "status": "Status",
+    "maturityDate": "Maturity Date",
+    "createdAt": "Created At",
+    "withdraw": "Withdraw",
+    "close": "Close Account",
+    "transactions": "Transactions",
+    "statements": "Statements",
+    "active": "Active",
+    "closed": "Closed",
+    "prematureClosed": "Prematurely Closed"
+  },
+  "reports": {
+    "fdSummary": "FD Summary",
+    "portfolio": "My Portfolio",
+    "exportCsv": "Export CSV"
+  },
+  "common": {
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "success": "Success",
+    "error": "Error",
+    "loading": "Loading...",
+    "noData": "No data available."
+  }
+}

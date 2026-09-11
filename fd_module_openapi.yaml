@@ -1,0 +1,519 @@
+
+
+
+
+
+
+openapi: 3.0.3
+info:
+  title: Fixed Deposit (FD) Microservice - FD Account Module API
+  description: Official OpenAPI 3.0 Specification strictly for the Core Fixed Deposit (FD) Account Module. Covers account creation, portfolio management, transaction history, statement retrieval, premature withdrawal, and manual closure.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api/fd
+    description: Direct Microservice Base URL
+  - url: http://localhost:9090/api/fd
+    description: API Gateway Base URL (Token Relay)
+
+security:
+  - BearerAuth: []
+
+paths:
+  /account/create:
+    post:
+      summary: Create FD Account & Post Initial Deposit Transaction
+      description: Validates product parameters, calculates effective rate (including capped category add-ons), generates a unique 10-digit account number, creates the FD account, and logs the initial DEPOSIT transaction within a single atomic `@Transactional` boundary.
+      operationId: createFdAccount
+      tags:
+        - FD Account Lifecycle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FdAccountCreateRequest'
+            example:
+              customerId: "CUST10045"
+              productCode: "FD_STD"
+              principalAmount: 200000.00
+              termMonths: 12
+              branchCode: "001"
+              currency: "INR"
+              categories:
+                - "SENIOR_CITIZEN"
+      responses:
+        '200':
+          description: FD Account created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FdAccountResponse'
+              example:
+                fdAccountNo: "0010000018"
+                customerId: "CUST10045"
+                productCode: "FD_STD"
+                currency: "INR"
+                principalAmount: 200000.00
+                interestRate: 7.50
+                tenureMonths: 12
+                compoundingFrequency: "QUARTERLY"
+                status: "ACTIVE"
+                maturityDate: "2027-08-27"
+                accruedInterest: 0.00
+                createdAt: "2026-08-27T11:15:00"
+                createdBy: "officer_01"
+                initialTransactionId: 1001
+                message: "Account created successfully with initial deposit"
+        '400':
+          $ref: '#/components/responses/400BadRequest'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '403':
+          $ref: '#/components/responses/403Forbidden'
+        '404':
+          $ref: '#/components/responses/404NotFound'
+
+  /accounts/my:
+    get:
+      summary: Fetch Logged-in Customer's FD Portfolio
+      description: Returns all Fixed Deposit accounts associated with the currently authenticated customer based on JWT context.
+      operationId: getMyAccounts
+      tags:
+        - Portfolio & Queries
+      responses:
+        '200':
+          description: List of customer's FD accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FdAccountResponse'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+
+  /accounts/all:
+    get:
+      summary: Fetch All FD Accounts (Bank Officer / Admin)
+      description: Returns a complete list of all Fixed Deposit accounts across all customers for branch management and administrative oversight.
+      operationId: getAllAccounts
+      tags:
+        - Portfolio & Queries
+      responses:
+        '200':
+          description: List of all FD accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FdAccountResponse'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '403':
+          $ref: '#/components/responses/403Forbidden'
+
+  /account/{fdAccountNo}:
+    get:
+      summary: Get FD Account Details by Account Number
+      description: Fetches complete details of a specific Fixed Deposit account.
+      operationId: getAccountDetails
+      tags:
+        - Portfolio & Queries
+      parameters:
+        - name: fdAccountNo
+          in: path
+          required: true
+          description: The 10-digit unique FD Account Number
+          schema:
+            type: string
+          example: "0010000018"
+      responses:
+        '200':
+          description: Account details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FdAccountResponse'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '404':
+          $ref: '#/components/responses/404NotFound'
+
+  /account/{fdAccountNo}/transactions:
+    get:
+      summary: Fetch Double-Entry Transaction Ledger for FD Account
+      description: Retrieves the immutable insert-only transaction history for an FD account, including debit and credit General Ledger (GL) mappings.
+      operationId: getAccountTransactions
+      tags:
+        - Ledger & Statements
+      parameters:
+        - name: fdAccountNo
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "0010000018"
+      responses:
+        '200':
+          description: List of transaction ledger records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FdTransaction'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '404':
+          $ref: '#/components/responses/404NotFound'
+
+  /account/{fdAccountNo}/statements:
+    get:
+      summary: Fetch Monthly Statement Snapshots for FD Account
+      description: Retrieves the periodic statement entries recording opening balance, interest credited, and closing balance for each month.
+      operationId: getAccountStatements
+      tags:
+        - Ledger & Statements
+      parameters:
+        - name: fdAccountNo
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "0010000018"
+      responses:
+        '200':
+          description: List of monthly statement snapshots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FdStatement'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '404':
+          $ref: '#/components/responses/404NotFound'
+
+  /account/withdraw:
+    post:
+      summary: Execute Premature FD Withdrawal & Penalty Deduction
+      description: Calculates interest accrued up to the withdrawal date, applies the product-configured penalty deduction (e.g., rate reduction by 1.0%), updates account status to `PREMATURE_CLOSED`, posts payout and GL entries atomically, and transfers funds.
+      operationId: processPrematureWithdrawal
+      tags:
+        - Lifecycle & Closures
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WithdrawalRequest'
+            example:
+              fdAccountNo: "0010000018"
+              withdrawalDate: "2027-02-27"
+              transferAccount: "SB00056789"
+              remarks: "Premature withdrawal requested by customer"
+      responses:
+        '200':
+          description: Premature withdrawal processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WithdrawalResponse'
+              example:
+                status: "PREMATURE_CLOSED"
+                message: "FD Account prematurely closed with penalty applied"
+                fdAccountNo: "0010000018"
+                withdrawalAmount: 205600.00
+                principalReturned: 200000.00
+                interestEarned: 7000.00
+                penaltyApplied: 1400.00
+                effectiveRate: 6.50
+        '400':
+          $ref: '#/components/responses/400BadRequest'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '404':
+          $ref: '#/components/responses/404NotFound'
+
+  /account/manual-close:
+    post:
+      summary: Execute Manual Maturity Closure
+      description: Allows a Bank Officer or Admin to manually close a matured FD account and trigger the maturity payout GL entries.
+      operationId: manualCloseFdAccount
+      tags:
+        - Lifecycle & Closures
+      parameters:
+        - name: fdAccountNo
+          in: query
+          required: true
+          description: Account number to close
+          schema:
+            type: string
+          example: "0010000018"
+      responses:
+        '200':
+          description: Account closed manually
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          $ref: '#/components/responses/400BadRequest'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+        '403':
+          $ref: '#/components/responses/403Forbidden'
+        '404':
+          $ref: '#/components/responses/404NotFound'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Pass standard JWT Bearer token obtained from `/api/auth/login`.
+
+  responses:
+    400BadRequest:
+      description: Bad Request / Business Validation Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+          example:
+            success: false
+            message: "Principal amount is below minimum deposit requirement of 1000.00"
+            data: null
+            timestamp: "2026-08-27T11:20:00"
+
+    401Unauthorized:
+      description: Missing or Invalid JWT Token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+          example:
+            success: false
+            message: "Full authentication is required to access this resource"
+            data: null
+            timestamp: "2026-08-27T11:20:00"
+
+    403Forbidden:
+      description: Insufficient Role Privileges
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+          example:
+            success: false
+            message: "Access Denied: Requires BANK_OFFICER or ADMIN role"
+            data: null
+            timestamp: "2026-08-27T11:20:00"
+
+    404NotFound:
+      description: Resource Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+          example:
+            success: false
+            message: "FD Account not found: 0010000018"
+            data: null
+            timestamp: "2026-08-27T11:20:00"
+
+  schemas:
+    FdAccountCreateRequest:
+      type: object
+      required:
+        - customerId
+        - productCode
+        - principalAmount
+        - termMonths
+        - branchCode
+      properties:
+        customerId:
+          type: string
+          description: Unique customer identification code
+        productCode:
+          type: string
+          description: Code of the pre-configured FD product (e.g. FD_STD)
+        principalAmount:
+          type: number
+          format: double
+          minimum: 1000.00
+          description: Deposit amount
+        termMonths:
+          type: integer
+          minimum: 1
+          description: Duration in months
+        branchCode:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: 3-digit branch identifier
+        currency:
+          type: string
+          default: "INR"
+          enum: [INR, USD]
+        categories:
+          type: array
+          items:
+            type: string
+          description: Applicable customer category adjustments (e.g. SENIOR_CITIZEN, EMPLOYEE)
+
+    FdAccountResponse:
+      type: object
+      properties:
+        fdAccountNo:
+          type: string
+          description: Generated 10-digit account number (Branch + Seq + Checksum)
+        customerId:
+          type: string
+        productCode:
+          type: string
+        currency:
+          type: string
+        principalAmount:
+          type: number
+          format: double
+        interestRate:
+          type: number
+          format: double
+          description: Final effective annual interest rate (%) after category add-ons and rate cap
+        tenureMonths:
+          type: integer
+        compoundingFrequency:
+          type: string
+          enum: [MONTHLY, QUARTERLY, HALF_YEARLY, YEARLY]
+        status:
+          type: string
+          enum: [ACTIVE, CLOSED, PREMATURE_CLOSED]
+        maturityDate:
+          type: string
+          format: date
+        accruedInterest:
+          type: number
+          format: double
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+        initialTransactionId:
+          type: integer
+          format: int64
+        message:
+          type: string
+
+    WithdrawalRequest:
+      type: object
+      required:
+        - fdAccountNo
+      properties:
+        fdAccountNo:
+          type: string
+        withdrawalDate:
+          type: string
+          format: date
+          description: Date of withdrawal (defaults to current date if omitted)
+        transferAccount:
+          type: string
+          description: Target customer savings account for payout
+        remarks:
+          type: string
+
+    WithdrawalResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+        fdAccountNo:
+          type: string
+        withdrawalAmount:
+          type: number
+          format: double
+          description: Net payout (Principal + Accrued Interest - Penalty)
+        principalReturned:
+          type: number
+          format: double
+        interestEarned:
+          type: number
+          format: double
+        penaltyApplied:
+          type: number
+          format: double
+        effectiveRate:
+          type: number
+          format: double
+
+    FdTransaction:
+      type: object
+      properties:
+        txnId:
+          type: integer
+          format: int64
+        fdAccountNo:
+          type: string
+        txnType:
+          type: string
+          enum: [DEPOSIT, INTEREST_CREDIT, WITHDRAWAL, MATURITY_PAYOUT]
+        amount:
+          type: number
+          format: double
+        currency:
+          type: string
+        debitGlAccount:
+          type: string
+          description: General Ledger Debit account name
+        creditGlAccount:
+          type: string
+          description: General Ledger Credit account name
+        status:
+          type: string
+        txnTimestamp:
+          type: string
+          format: date-time
+        remarks:
+          type: string
+        uuid:
+          type: string
+
+    FdStatement:
+      type: object
+      properties:
+        statementId:
+          type: integer
+          format: int64
+        fdAccountNo:
+          type: string
+        statementDate:
+          type: string
+          format: date
+        openingBalance:
+          type: number
+          format: double
+        interestCredited:
+          type: number
+          format: double
+        closingBalance:
+          type: number
+          format: double
+
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+        timestamp:
+          type: string
+          format: date-time

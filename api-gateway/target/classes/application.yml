@@ -1,0 +1,36 @@
+server:
+  port: 9090
+
+jwt:
+  secret: ${JWT_SECRET:fd-microservice-jwt-secret-key-that-is-at-least-256-bits-long-for-HS256}
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: auth-route
+          uri: ${FD_SERVICE_URI:http://localhost:8080}
+          predicates:
+            - Path=/api/auth/**
+        - id: api-route
+          uri: ${FD_SERVICE_URI:http://localhost:8080}
+          predicates:
+            - Path=/api/**
+          filters:
+            - JwtValidation
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: DEBUG

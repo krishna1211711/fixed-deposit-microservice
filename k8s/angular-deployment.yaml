@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: angular-ui-deployment
+  namespace: fd-banking
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: angular-ui
+  template:
+    metadata:
+      labels:
+        app: angular-ui
+    spec:
+      containers:
+        - name: angular-ui
+          image: fd-angular-ui:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80

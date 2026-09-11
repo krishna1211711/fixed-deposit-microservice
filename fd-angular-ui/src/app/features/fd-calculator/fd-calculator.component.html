@@ -1,0 +1,113 @@
+<div class="calculator-container animate-fade-in">
+  <div class="header-section mb-4">
+    <h2>{{ 'fdCalc.title' | translate }}</h2>
+  </div>
+
+  <div class="grid grid-cols-2">
+    <!-- Input Form -->
+    <div class="glass-card animate-slide-up">
+      <form (ngSubmit)="calculate()" #calcForm="ngForm">
+        
+        <div class="form-group">
+          <label class="form-label">{{ 'fdCalc.principal' | translate }}</label>
+          <input type="number" class="form-control" name="principal" [(ngModel)]="request.principalAmount" required min="1000">
+        </div>
+
+        <div class="grid grid-cols-2">
+          <div class="form-group">
+            <label class="form-label">{{ 'fdCalc.term' | translate }}</label>
+            <input type="number" class="form-control" name="term" [(ngModel)]="request.termMonths" required min="1" max="120">
+          </div>
+          <div class="form-group">
+            <label class="form-label">{{ 'fdCalc.baseRate' | translate }}</label>
+            <input type="number" class="form-control" name="baseRate" [(ngModel)]="request.baseRate" required step="0.1">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2">
+          <div class="form-group">
+            <label class="form-label">{{ 'fdCalc.calcType' | translate }}</label>
+            <select class="form-control" name="calcType" [(ngModel)]="request.calculationType">
+              <option value="SIMPLE">{{ 'fdCalc.simple' | translate }}</option>
+              <option value="COMPOUND">{{ 'fdCalc.compound' | translate }}</option>
+            </select>
+          </div>
+          <div class="form-group" *ngIf="request.calculationType === 'COMPOUND'">
+            <label class="form-label">{{ 'fdCalc.compounding' | translate }}</label>
+            <select class="form-control" name="compounding" [(ngModel)]="request.compoundingFrequency">
+              <option value="MONTHLY">Monthly</option>
+              <option value="QUARTERLY">Quarterly</option>
+              <option value="HALF_YEARLY">Half-Yearly</option>
+              <option value="YEARLY">Yearly</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">{{ 'fdCalc.categories' | translate }}</label>
+          <div class="checkbox-group">
+            <label class="checkbox-label" *ngFor="let opt of categoryOptions">
+              <input type="checkbox" 
+                     [checked]="isCategorySelected(opt.value)"
+                     (change)="toggleCategory($event, opt.value)">
+              <span class="custom-checkbox"></span>
+              {{ opt.label | translate }}
+            </label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-full mt-4" [disabled]="!calcForm.valid || loading">
+          {{ 'fdCalc.calculate' | translate }}
+        </button>
+      </form>
+    </div>
+
+    <!-- Result Panel -->
+    <div class="glass-card result-panel animate-slide-up" style="animation-delay: 0.1s;">
+      <div class="result-header">
+        <h3>{{ 'fdCalc.result' | translate }}</h3>
+      </div>
+      
+      <div class="result-content" *ngIf="result; else noData">
+        <div class="amount-display main-amount">
+          <span class="label">{{ 'fdCalc.maturityAmount' | translate }}</span>
+          <div class="value text-success animate-pulse">{{ result.maturityAmount | currencyFormat }}</div>
+        </div>
+
+        <div class="grid grid-cols-2 mt-4 gap-4">
+          <div class="amount-display secondary">
+            <span class="label">{{ 'fdCalc.principal' | translate }}</span>
+            <div class="value">{{ request.principalAmount | currencyFormat }}</div>
+          </div>
+          <div class="amount-display secondary">
+            <span class="label">{{ 'fdCalc.interestEarned' | translate }}</span>
+            <div class="value text-primary">{{ result.interestEarned | currencyFormat }}</div>
+          </div>
+        </div>
+
+        <div class="rate-breakdown mt-4 p-4">
+          <div class="flex justify-between items-center border-bottom pb-2 mb-2">
+            <span>{{ 'fdCalc.baseRate' | translate }}</span>
+            <strong>{{ request.baseRate }}%</strong>
+          </div>
+          
+          <div class="flex justify-between items-center text-muted text-sm pb-1" *ngFor="let cat of result.categoryAddons | keyvalue">
+            <span>Add-on ({{ cat.key }})</span>
+            <span>+{{ cat.value }}%</span>
+          </div>
+
+          <div class="flex justify-between items-center pt-2 mt-2 border-top highlight-row">
+            <strong class="text-highlight">{{ 'fdCalc.effectiveRate' | translate }}</strong>
+            <strong class="text-highlight rate-value">{{ result.effectiveRate }}%</strong>
+          </div>
+        </div>
+      </div>
+      
+      <ng-template #noData>
+        <div class="text-center text-muted p-4 mt-4">
+          Enter details and calculate to see results
+        </div>
+      </ng-template>
+    </div>
+  </div>
+</div>

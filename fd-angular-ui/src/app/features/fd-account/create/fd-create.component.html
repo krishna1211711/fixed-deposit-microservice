@@ -1,0 +1,72 @@
+<div class="create-container animate-fade-in">
+  <div class="header-section mb-4">
+    <h2>{{ 'fdAccount.create' | translate }}</h2>
+  </div>
+
+  <div class="glass-card max-w-lg mx-auto">
+    <div class="alert alert-success animate-slide-up" *ngIf="successMessage">
+      <div class="icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+      </div>
+      <div>{{ successMessage }}</div>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" #createForm="ngForm" *ngIf="!successMessage">
+      
+      <div class="form-group">
+        <label class="form-label">{{ 'fdAccount.customerId' | translate }}</label>
+        <input type="text" class="form-control" name="customerId" [(ngModel)]="request.customerId" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">{{ 'fdAccount.productCode' | translate }}</label>
+        <select class="form-control" name="productCode" [(ngModel)]="request.productCode" (change)="onProductChange()" required>
+          <option value="">Select a Product</option>
+          <option *ngFor="let p of products" [value]="p.code">{{ p.name }} ({{ p.baseRate }}%)</option>
+        </select>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="form-group">
+          <label class="form-label">{{ 'fdAccount.principalAmount' | translate }}</label>
+          <input type="number" class="form-control" name="principal" [(ngModel)]="request.principalAmount" required min="1000">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">{{ 'fdAccount.currency' | translate }}</label>
+          <select class="form-control" name="currency" [(ngModel)]="request.currency">
+            <option value="INR">INR (₹)</option>
+            <option value="USD">USD ($)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="form-group">
+          <label class="form-label">{{ 'fdAccount.termMonths' | translate }}</label>
+          <input type="number" class="form-control" name="term" [(ngModel)]="request.termMonths" required min="1">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">{{ 'fdAccount.branchCode' | translate }}</label>
+          <input type="text" class="form-control" name="branchCode" [(ngModel)]="request.branchCode" required maxlength="3" minlength="3">
+        </div>
+      </div>
+
+      <div class="product-preview mt-4 p-4 mb-4" *ngIf="selectedProduct">
+        <h4 class="text-primary mb-2">{{ selectedProduct.name }}</h4>
+        <div class="flex justify-between text-sm">
+          <span class="text-muted">Base Rate: <strong class="text-main">{{ selectedProduct.baseRate }}%</strong></span>
+          <span class="text-muted">Type: <strong class="text-main">{{ selectedProduct.calculationType }}</strong></span>
+        </div>
+      </div>
+
+      <div class="text-danger mb-4 text-center" *ngIf="error">{{ error }}</div>
+
+      <button type="submit" class="btn btn-primary w-full" [disabled]="!createForm.valid || loading">
+        {{ loading ? ('common.loading' | translate) : ('common.submit' | translate) }}
+      </button>
+
+    </form>
+  </div>
+</div>

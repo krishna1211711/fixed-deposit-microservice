@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apex Core Banking | Fixed Deposit Portal</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+
+  <!-- Navbar -->
+  <header class="navbar">
+    <a href="#" class="brand-logo">
+      <div style="width: 34px; height: 34px; background: var(--accent-gradient); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; box-shadow: 0 4px 10px rgba(37,99,235,0.4);">🏦</div>
+      <span>ApexBank <span style="font-weight: 300; opacity: 0.8;">FD Portal</span></span>
+      <span class="brand-badge">Core Microservice</span>
+    </a>
+
+    <div class="nav-user">
+      <div id="user-badge"></div>
+      <a href="/swagger-ui.html" target="_blank" class="btn btn-outline btn-sm">📖 Swagger API Docs</a>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="container">
+
+    <!-- Quick Role Login Bar -->
+    <div id="auth-section" class="card" style="margin-bottom: 1.5rem; background: rgba(37,99,235,0.06); border: 1px dashed rgba(37,99,235,0.3);">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <strong style="color: #60a5fa;">🔑 Quick Demo Login:</strong>
+          <span style="color: var(--text-muted); font-size: 0.85rem; margin-left: 0.5rem;">Select a pre-seeded banking identity to test workflows:</span>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-primary btn-sm" onclick="quickLogin('officer1', 'admin123')">👮 Log in as Bank Officer</button>
+          <button class="btn btn-outline btn-sm" onclick="quickLogin('johndoe', 'admin123')">👤 Log in as Customer (John Doe)</button>
+          <button class="btn btn-outline btn-sm" onclick="quickLogin('admin', 'admin123')">⚙️ Log in as Admin</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="tabs-nav">
+      <button class="tab-btn active" data-tab="create-account" onclick="switchTab('create-account')">📝 Open New Fixed Deposit</button>
+      <button class="tab-btn" data-tab="my-accounts" onclick="switchTab('my-accounts')">📁 My Portfolio & Accounts</button>
+      <button class="tab-btn" data-tab="calculator" onclick="switchTab('calculator')">🧮 Public Simulator</button>
+      <button class="tab-btn" data-tab="reports" onclick="switchTab('reports')">📊 Portfolio Reports</button>
+      <button class="tab-btn" data-tab="all-accounts" onclick="switchTab('all-accounts')">🏦 All Accounts Ledger</button>
+    </nav>
+
+    <!-- Tab 1: Create FD Account -->
+    <section id="tab-create-account" class="tab-content">
+      <div class="grid-2">
+        
+        <!-- Left: Account Creation Form -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Open Fixed Deposit Account</h2>
+          </div>
+
+          <form id="fd-create-form">
+            <div class="form-group">
+              <label class="form-label" for="input-customer-id">Customer ID *</label>
+              <input type="text" id="input-customer-id" class="form-control" placeholder="e.g. CUST001" value="CUST001" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="input-product">Product Code *</label>
+              <select id="input-product" class="form-control" required></select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="input-principal">Principal Amount (INR) *</label>
+              <input type="number" id="input-principal" class="form-control" placeholder="Min. deposit requirement" value="50000" min="1000" step="1000" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="input-months">Term Duration (Months) *</label>
+              <select id="input-months" class="form-control" required>
+                <option value="3">3 Months</option>
+                <option value="6">6 Months</option>
+                <option value="12" selected>12 Months (1 Year)</option>
+                <option value="24">24 Months (2 Years)</option>
+                <option value="36">36 Months (3 Years)</option>
+                <option value="60">60 Months (5 Years)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="input-branch">Branch Code *</label>
+              <input type="text" id="input-branch" class="form-control" value="001" maxlength="3" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">User Category Adjustments (Add-ons)</label>
+              <div class="checkbox-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" class="category-checkbox" value="SENIOR_CITIZEN">
+                  <span>👴 Senior Citizen (+0.50%)</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" class="category-checkbox" value="STAFF">
+                  <span>💼 Bank Staff (+1.00%)</span>
+                </label>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+              ✨ Book & Open Fixed Deposit
+            </button>
+          </form>
+        </div>
+
+        <!-- Right: Dynamic Data & Rate Projection Display -->
+        <div>
+          <div class="card" style="margin-bottom: 1.5rem;">
+            <div class="card-header">
+              <h2 class="card-title">Live Dynamic Rate & Valuation</h2>
+              <span class="badge badge-active">Real-Time</span>
+            </div>
+
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+              Interest rates and category adjustments are automatically evaluated in real time before booking.
+            </p>
+
+            <div class="live-preview-box">
+              <div class="preview-row">
+                <span style="color: var(--text-muted);">Base Contract Rate:</span>
+                <strong id="preview-base-rate">5.00%</strong>
+              </div>
+              <div class="preview-row">
+                <span style="color: var(--text-muted);">Category Rate Add-on:</span>
+                <span id="preview-addon" style="color: #60a5fa;">None (0.00%)</span>
+              </div>
+              <div class="preview-row">
+                <span style="color: var(--text-muted);">Effective Annual Rate:</span>
+                <strong id="preview-effective-rate" style="color: #34d399; font-size: 1.1rem;">5.00% p.a.</strong>
+              </div>
+              <div class="preview-row">
+                <span style="color: var(--text-muted);">Estimated Interest Earned:</span>
+                <strong id="preview-interest" style="color: #fbbf24;">₹2,547.00</strong>
+              </div>
+              <div class="preview-row">
+                <span>Projected Maturity Amount:</span>
+                <span id="preview-maturity">₹52,547.00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Transaction Success Display Area -->
+          <div id="creation-success-container"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Tab 2: My Accounts & Portfolio -->
+    <section id="tab-my-accounts" class="tab-content" style="display: none;">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Customer Fixed Deposit Portfolio</h2>
+          <button class="btn btn-outline btn-sm" onclick="loadMyAccounts()">🔄 Refresh</button>
+        </div>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>FD Account No</th>
+                <th>Principal Amount</th>
+                <th>Interest Rate</th>
+                <th>Tenure</th>
+                <th>Maturity Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="my-accounts-table-body">
+              <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Loading accounts...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 3: Public Calculator Simulation -->
+    <section id="tab-calculator" class="tab-content" style="display: none;">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Fixed Deposit Growth Calculator</h2>
+            <span class="badge badge-active">Public API</span>
+          </div>
+
+          <form id="fd-calc-form">
+            <div class="form-group">
+              <label class="form-label" for="calc-principal">Principal Deposit (INR) *</label>
+              <input type="number" id="calc-principal" class="form-control" value="100000" step="5000" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="calc-rate">Contract Annual Rate (%) *</label>
+              <input type="number" id="calc-rate" class="form-control" value="6.50" step="0.1" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="calc-months">Investment Tenure (Months) *</label>
+              <input type="number" id="calc-months" class="form-control" value="12" min="1" max="120" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="calc-freq">Compounding Frequency</label>
+              <select id="calc-freq" class="form-control">
+                <option value="QUARTERLY" selected>Quarterly (Standard)</option>
+                <option value="MONTHLY">Monthly</option>
+                <option value="HALFYEARLY">Half-Yearly</option>
+                <option value="YEARLY">Yearly</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Category Adjustments</label>
+              <div class="checkbox-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="calc-cat-senior" value="SENIOR_CITIZEN">
+                  <span>Senior Citizen (+0.50%)</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="calc-cat-staff" value="STAFF">
+                  <span>Bank Staff (+1.00%)</span>
+                </label>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Calculate Maturity</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Simulation Result</h2>
+          </div>
+
+          <div id="calc-result-box" style="display: none;">
+            <div class="live-preview-box" style="background: rgba(16, 185, 129, 0.06); border-color: rgba(16, 185, 129, 0.3);">
+              <div class="preview-row">
+                <span style="color: var(--text-muted);">Effective Rate (with add-ons):</span>
+                <strong id="calc-res-rate" style="color: #34d399;">-</strong>
+              </div>
+              <div class="preview-row">
+                <span style="color: var(--text-muted);">Total Compound Interest:</span>
+                <strong id="calc-res-interest" style="color: #fbbf24;">-</strong>
+              </div>
+              <div class="preview-row">
+                <span>Final Projected Payout:</span>
+                <span id="calc-res-maturity" style="color: #34d399;">-</span>
+              </div>
+            </div>
+          </div>
+          <p id="calc-empty-msg" style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 2rem 0;">
+            Adjust parameters on the left and click "Calculate Maturity" to simulate financial projections.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 4: Portfolio Reports -->
+    <section id="tab-reports" class="tab-content" style="display: none;">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Bank-Wide Fixed Deposit Summary</h2>
+          <button class="btn btn-outline btn-sm" onclick="loadReports()">🔄 Refresh Report</button>
+        </div>
+        <div id="reports-container">
+          <p style="text-align: center; color: var(--text-muted);">Loading reports...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 5: All Accounts Ledger -->
+    <section id="tab-all-accounts" class="tab-content" style="display: none;">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Global Bank Accounts Master Ledger</h2>
+          <button class="btn btn-outline btn-sm" onclick="loadAllAccounts()">🔄 Refresh Ledger</button>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>FD Account No</th>
+                <th>Customer ID</th>
+                <th>Principal</th>
+                <th>Interest Rate</th>
+                <th>Accrued Interest</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="all-accounts-table-body">
+              <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Loading ledger...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Pre-Maturity Withdrawal Modal -->
+  <div id="withdrawal-modal" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color: #ef4444;">⚠️ Confirm Premature Withdrawal</h3>
+        <button class="close-btn" onclick="closeWithdrawalModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+          You are about to permanently close this Fixed Deposit account prior to its contracted maturity date.
+        </p>
+
+        <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: var(--radius-sm); margin-bottom: 1rem;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="color: var(--text-muted);">Account Number:</span>
+            <span id="modal-withdraw-acct" class="mono-tag"></span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="color: var(--text-muted);">Principal Deposit:</span>
+            <strong id="modal-withdraw-principal"></strong>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-muted);">Contracted Rate:</span>
+            <span id="modal-withdraw-rate"></span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="withdraw-date-input">Effective Withdrawal Date</label>
+          <input type="date" id="withdraw-date-input" class="form-control">
+        </div>
+
+        <p style="font-size: 0.8rem; color: #f59e0b;">
+          ⚠️ Note: A pre-maturity penalty fee (1.00% standard) will be deducted from accrued interest in accordance with product terms.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeWithdrawalModal()">Cancel</button>
+        <button class="btn btn-danger" onclick="confirmWithdrawal()">Proceed with Withdrawal</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Withdrawal Receipt Modal -->
+  <div id="withdrawal-receipt-modal" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color: #10b981;">✅ Withdrawal & Closure Receipt</h3>
+        <button class="close-btn" onclick="closeReceiptModal()">&times;</button>
+      </div>
+      <div id="withdrawal-receipt-modal-body" class="modal-body"></div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="closeReceiptModal()">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transaction History Modal -->
+  <div id="txn-modal" class="modal-backdrop">
+    <div class="modal-box" style="max-width: 720px;">
+      <div class="modal-header">
+        <h3 class="modal-title">📜 Double-Entry Transaction Ledger: <span id="txn-modal-acct" class="mono-tag"></span></h3>
+        <button class="close-btn" onclick="closeTxnModal()">&times;</button>
+      </div>
+      <div class="modal-body table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Type</th>
+              <th>Amount</th>
+              <th>GL Debit ➔ Credit</th>
+              <th>Timestamp</th>
+            </tr>
+          </thead>
+          <tbody id="txn-table-body"></tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeTxnModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statements Modal -->
+  <div id="stmt-modal" class="modal-backdrop">
+    <div class="modal-box" style="max-width: 680px;">
+      <div class="modal-header">
+        <h3 class="modal-title">📄 Monthly Statements: <span id="stmt-modal-acct" class="mono-tag"></span></h3>
+        <button class="close-btn" onclick="closeStmtModal()">&times;</button>
+      </div>
+      <div class="modal-body table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Statement Date</th>
+              <th>Opening Balance</th>
+              <th>Interest Credited (Delta)</th>
+              <th>Closing Balance</th>
+            </tr>
+          </thead>
+          <tbody id="stmt-table-body"></tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeStmtModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

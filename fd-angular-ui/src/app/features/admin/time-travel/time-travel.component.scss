@@ -1,0 +1,22 @@
+.time-travel-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.max-w-lg {
+  max-width: 600px;
+}
+
+.alert-warning {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  color: var(--highlight);
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.alert-warning .icon {
+  font-weight: 900;
+}

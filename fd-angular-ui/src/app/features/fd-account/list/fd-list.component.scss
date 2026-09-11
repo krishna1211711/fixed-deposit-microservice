@@ -1,0 +1,22 @@
+.list-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+}
+
+.search-box {
+  flex: 1;
+  max-width: 300px;
+}
+
+.filter-box {
+  width: 200px;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}

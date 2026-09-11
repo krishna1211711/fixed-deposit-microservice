@@ -1,0 +1,56 @@
+<div class="reports-container animate-fade-in">
+  <div class="header-section mb-4 flex justify-between items-center">
+    <h2>{{ authService.isCustomer() ? ('reports.portfolio' | translate) : ('reports.fdSummary' | translate) }}</h2>
+    <button class="btn btn-outline flex items-center gap-2" (click)="exportCsv()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+      {{ 'reports.exportCsv' | translate }}
+    </button>
+  </div>
+
+  <!-- Admin / Officer View -->
+  <div class="glass-card" *ngIf="!authService.isCustomer()">
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Product Code</th>
+            <th>Total Accounts</th>
+            <th>Total Principal</th>
+            <th>Average Rate</th>
+          </tr>
+        </thead>
+        <tbody *ngIf="!loading">
+          <tr *ngFor="let item of summaryData">
+            <td><strong>{{ item.productCode }}</strong></td>
+            <td>{{ item.totalAccounts }}</td>
+            <td>{{ item.totalPrincipalAmount | currencyFormat }}</td>
+            <td>{{ item.averageInterestRate | number:'1.2-2' }}%</td>
+          </tr>
+        </tbody>
+      </table>
+      <div *ngIf="!loading && summaryData.length === 0" class="text-center p-4 text-muted">No data available</div>
+    </div>
+  </div>
+
+  <!-- Customer View -->
+  <div class="glass-card" *ngIf="authService.isCustomer() && portfolioData">
+    <div class="grid grid-cols-3 mb-4">
+      <div class="p-4 text-center border-right">
+        <h4 class="text-muted mb-2">Total Investments</h4>
+        <h2 class="text-main">{{ portfolioData.totalInvestments | currencyFormat }}</h2>
+      </div>
+      <div class="p-4 text-center border-right">
+        <h4 class="text-muted mb-2">Total Interest Earned</h4>
+        <h2 class="text-accent">{{ portfolioData.totalInterestEarned | currencyFormat }}</h2>
+      </div>
+      <div class="p-4 text-center">
+        <h4 class="text-muted mb-2">Active Accounts</h4>
+        <h2 class="text-main">{{ portfolioData.activeAccountsCount }}</h2>
+      </div>
+    </div>
+  </div>
+
+  <div class="text-center p-4" *ngIf="loading">
+    <div class="animate-pulse">{{ 'common.loading' | translate }}</div>
+  </div>
+</div>

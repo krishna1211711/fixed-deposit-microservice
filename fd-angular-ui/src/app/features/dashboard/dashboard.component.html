@@ -1,0 +1,108 @@
+<div class="dashboard-container animate-fade-in">
+  <div class="welcome-banner glass-card mb-4">
+    <div class="banner-content">
+      <h2>{{ 'dashboard.welcome' | translate:{name: authService.getUsername()} }}</h2>
+      <p class="role-text">{{ authService.getRole() }}</p>
+    </div>
+    <div class="banner-actions" *ngIf="authService.isAdmin() || authService.isOfficer()">
+      <a routerLink="/fd/create" class="btn btn-primary">{{ 'nav.createFd' | translate }}</a>
+      <a routerLink="/admin/batch" class="btn btn-accent" *ngIf="authService.isAdmin()">{{ 'nav.batchControl' | translate }}</a>
+    </div>
+  </div>
+
+  <div class="stats-grid grid grid-cols-4 mb-4" *ngIf="!loading">
+    <div class="stat-card glass-card">
+      <div class="stat-icon bg-primary-light">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+      </div>
+      <div class="stat-content">
+        <p class="stat-label">{{ 'dashboard.totalFds' | translate }}</p>
+        <h3 class="stat-value">{{ summary.totalAccounts }}</h3>
+      </div>
+    </div>
+
+    <div class="stat-card glass-card">
+      <div class="stat-icon bg-accent-light">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+      </div>
+      <div class="stat-content">
+        <p class="stat-label">{{ 'dashboard.totalPrincipal' | translate }}</p>
+        <h3 class="stat-value">{{ summary.totalPrincipal | currencyFormat }}</h3>
+      </div>
+    </div>
+
+    <div class="stat-card glass-card" *ngIf="authService.isCustomer()">
+      <div class="stat-icon bg-warning-light">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--highlight)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+      </div>
+      <div class="stat-content">
+        <p class="stat-label">{{ 'dashboard.totalInterest' | translate }}</p>
+        <h3 class="stat-value">{{ summary.totalInterest | currencyFormat }}</h3>
+      </div>
+    </div>
+    
+    <div class="stat-card glass-card" *ngIf="!authService.isCustomer()">
+      <div class="stat-icon bg-warning-light">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--highlight)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      </div>
+      <div class="stat-content">
+        <p class="stat-label">System Status</p>
+        <h3 class="stat-value text-success">Online</h3>
+      </div>
+    </div>
+
+    <div class="stat-card glass-card">
+      <div class="stat-icon bg-success-light">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+      </div>
+      <div class="stat-content">
+        <p class="stat-label">{{ 'dashboard.activeFds' | translate }}</p>
+        <h3 class="stat-value">{{ summary.activeAccounts }}</h3>
+      </div>
+    </div>
+  </div>
+
+  <div class="glass-card animate-slide-up">
+    <div class="flex justify-between items-center mb-4">
+      <h3>{{ 'dashboard.recentFds' | translate }}</h3>
+      <a routerLink="/fd/list" class="btn btn-outline">{{ 'nav.allFds' | translate }}</a>
+    </div>
+
+    <div class="table-responsive" *ngIf="!loading && recentFds.length > 0">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>{{ 'fdAccount.accountNo' | translate }}</th>
+            <th>{{ 'fdAccount.principalAmount' | translate }}</th>
+            <th>{{ 'fdAccount.termMonths' | translate }}</th>
+            <th>{{ 'fdAccount.status' | translate }}</th>
+            <th>{{ 'fdAccount.maturityDate' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let fd of recentFds" [routerLink]="['/fd', fd.fdAccountNo]" style="cursor: pointer;">
+            <td><strong>{{ fd.fdAccountNo }}</strong></td>
+            <td>{{ fd.principalAmount | currencyFormat:fd.currency }}</td>
+            <td>{{ fd.termMonths }} mo</td>
+            <td>
+              <span class="badge" [ngClass]="{
+                'badge-active': fd.status === 'ACTIVE',
+                'badge-closed': fd.status === 'CLOSED',
+                'badge-warning': fd.status === 'PREMATURE_CLOSED'
+              }">{{ fd.status }}</span>
+            </td>
+            <td>{{ fd.maturityDate | date:'mediumDate' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="text-center p-4 text-muted" *ngIf="!loading && recentFds.length === 0">
+      <p>{{ 'common.noData' | translate }}</p>
+    </div>
+
+    <div class="text-center p-4" *ngIf="loading">
+      <div class="animate-pulse">{{ 'common.loading' | translate }}</div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,38 @@
+<div class="time-travel-container animate-fade-in">
+  <div class="header-section mb-4">
+    <h2>Time Travel Utility</h2>
+    <p class="text-danger">Testing and Debugging Only</p>
+  </div>
+
+  <div class="glass-card max-w-lg mx-auto">
+    <div class="alert alert-warning mb-4">
+      <div class="icon">!</div>
+      <div>
+        <strong>Warning:</strong> Time Travel simulates the passage of time by executing batches sequentially up to the target date. This will irrevocably alter account states.
+      </div>
+    </div>
+
+    <form (ngSubmit)="executeTimeTravel()" #ttForm="ngForm">
+      <div class="form-group">
+        <label class="form-label">Target Date</label>
+        <input type="date" class="form-control" name="targetDate" [(ngModel)]="request.targetDate" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Operations to Execute</label>
+        <select class="form-control" name="operation" [(ngModel)]="request.operation">
+          <option value="ALL">All Batches (Accrual & Maturity)</option>
+          <option value="ACCRUAL_ONLY">Interest Accrual Only</option>
+          <option value="MATURITY_ONLY">Maturity Processing Only</option>
+        </select>
+      </div>
+
+      <div class="text-success text-center mb-4" *ngIf="resultMessage">{{ resultMessage }}</div>
+      <div class="text-danger text-center mb-4" *ngIf="error">{{ error }}</div>
+
+      <button type="submit" class="btn btn-danger w-full mt-4" [disabled]="!ttForm.valid || loading">
+        {{ loading ? 'Executing Time Travel...' : 'Execute Time Travel' }}
+      </button>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,24 @@
+.batch-container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.icon-wrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bg-primary-light { background: rgba(59, 130, 246, 0.15); }
+
+.job-result {
+  font-size: 0.875rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.text-success { color: var(--accent); }

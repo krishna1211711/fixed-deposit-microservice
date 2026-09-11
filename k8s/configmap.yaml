@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fd-config
+  namespace: fd-banking
+data:
+  DB_HOST: "mysql-service"
+  DB_PORT: "3306"
+  DB_NAME: "fd_bank_db"
+  JWT_SECRET: "fd-microservice-jwt-secret-key-that-is-at-least-256-bits-long-for-HS256"
+  SPRING_PROFILES_ACTIVE: "prod"

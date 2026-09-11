@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: fd-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: fd_bank_db
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  fd-service:
+    build: ./fd-microservice
+    container_name: fd-microservice
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/fd_bank_db?useSSL=false&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root123
+      - JWT_SECRET=fd-microservice-jwt-secret-key-that-is-at-least-256-bits-long-for-HS256
+
+  gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "9090:9090"
+    depends_on:
+      - fd-service
+    environment:
+      - JWT_SECRET=fd-microservice-jwt-secret-key-that-is-at-least-256-bits-long-for-HS256
+      - FD_SERVICE_URI=http://fd-service:8080
+
+  angular-ui:
+    build: ./fd-angular-ui
+    container_name: angular-ui
+    ports:
+      - "4200:80"
+    depends_on:
+      - gateway
+
+  report-service:
+    build: ./report-service
+    container_name: report-service
+    depends_on:
+      - mysql
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=root123
+      - DB_NAME=fd_bank_db
+
+volumes:
+  mysql-data:
