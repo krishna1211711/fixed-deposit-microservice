@@ -28,6 +28,7 @@ public class FdAccountMapper {
         res.setCurrentBalance(account.getCurrentBalance() != null
                 ? account.getCurrentBalance() : account.getPrincipalAmount());
         res.setInterestRate(account.getInterestRate());
+        res.setDayCountConvention(account.getDayCountConvention());
         res.setTenureMonths(account.getTenureMonths());
         res.setCompoundingFrequency(account.getCompoundingFrequency());
         res.setPayoutFrequency(account.getPayoutFrequency());
@@ -41,6 +42,8 @@ public class FdAccountMapper {
         res.setLastPayoutDate(account.getLastPayoutDate());
         res.setNextPayoutDate(account.getNextPayoutDate());
         res.setMaturityInstruction(account.getMaturityInstruction());
+        res.setPrematureClosureAllowed(account.getPrematureClosureAllowed());
+        res.setPrematureClosurePenaltyPct(account.getPrematureClosurePenaltyPct());
         res.setMaturityProcessedAt(account.getMaturityProcessedAt());
         res.setRenewalAccountNo(account.getRenewalAccountNo());
         res.setCreatedAt(account.getCreatedAt());

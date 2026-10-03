@@ -135,10 +135,13 @@ public class MaturityServiceImpl implements MaturityService {
         renewal.setCurrentBalance(amount);
         renewal.setAccruedInterest(BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP));
         renewal.setInterestRate(old.getInterestRate());
+        renewal.setDayCountConvention(old.getDayCountConvention());
         renewal.setTenureMonths(old.getTenureMonths());
         renewal.setCompoundingFrequency(old.getCompoundingFrequency());
         renewal.setPayoutFrequency(old.getPayoutFrequency());
         renewal.setMaturityInstruction(old.getMaturityInstruction());
+        renewal.setPrematureClosureAllowed(old.getPrematureClosureAllowed());
+        renewal.setPrematureClosurePenaltyPct(old.getPrematureClosurePenaltyPct());
         renewal.setStatus("ACTIVE");
         renewal.setStartDate(renewalDate);
         renewal.setMaturityDate(renewalDate.plusMonths(old.getTenureMonths()));

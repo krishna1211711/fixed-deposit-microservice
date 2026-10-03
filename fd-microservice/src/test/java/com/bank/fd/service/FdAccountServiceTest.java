@@ -65,6 +65,9 @@ class FdAccountServiceTest {
         testProduct.setMaxRate(new BigDecimal("7.00"));
         testProduct.setRateCapAddon(new BigDecimal("1.50"));
         testProduct.setCompoundingFrequency("QUARTERLY");
+        testProduct.setDayCountConvention("ACTUAL_365");
+        testProduct.setPrematureClosureAllowed(false);
+        testProduct.setPreMaturityPenaltyPct(new BigDecimal("1.25"));
     }
 
     @Test
@@ -92,6 +95,9 @@ class FdAccountServiceTest {
             // Verify rate was capped at 7.00
             assertEquals(new BigDecimal("7.00"), acct.getInterestRate());
             assertEquals("ACTIVE", acct.getStatus());
+            assertEquals("ACTUAL_365", acct.getDayCountConvention());
+            assertFalse(acct.getPrematureClosureAllowed());
+            assertEquals(new BigDecimal("1.25"), acct.getPrematureClosurePenaltyPct());
             return acct;
         });
 

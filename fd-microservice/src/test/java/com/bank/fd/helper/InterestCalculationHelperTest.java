@@ -55,6 +55,10 @@ class InterestCalculationHelperTest {
         // Principal: 36,500, Rate: 10.00% -> Annual Interest = 3,650 -> Daily = 10.000000
         BigDecimal daily = helper.calculateDailyAccrual(new BigDecimal("36500.00"), new BigDecimal("10.00"));
         assertEquals(new BigDecimal("10.000000"), daily);
+        assertEquals(daily, helper.calculateDailyAccrual(
+                new BigDecimal("36500.00"), new BigDecimal("10.00"), "ACTUAL_365"));
+        assertThrows(IllegalArgumentException.class, () -> helper.calculateDailyAccrual(
+                new BigDecimal("36500.00"), new BigDecimal("10.00"), "ACTUAL_360"));
     }
 
     @Test

@@ -3,7 +3,6 @@ package com.bank.fd.service;
 import com.bank.fd.dto.request.WithdrawalRequest;
 import com.bank.fd.dto.response.WithdrawalResponse;
 import com.bank.fd.entity.FdAccount;
-import com.bank.fd.entity.Product;
 import com.bank.fd.event.EventPublisher;
 import com.bank.fd.exception.InvalidOperationException;
 import com.bank.fd.repository.FdAccountRepository;
@@ -33,8 +32,6 @@ class WithdrawalServiceTest {
     @Mock
     private FdAccountRepository accountRepository;
     @Mock
-    private ProductService productService;
-    @Mock
     private InterestLifecycleService lifecycleService;
     @Mock
     private FdTransactionService transactionService;
@@ -49,7 +46,6 @@ class WithdrawalServiceTest {
     private WithdrawalServiceImpl withdrawalService;
 
     private FdAccount account;
-    private Product product;
 
     @BeforeEach
     void setUp() {
@@ -62,13 +58,11 @@ class WithdrawalServiceTest {
         account.setCurrentBalance(new BigDecimal("103000.00"));
         account.setAccruedInterest(new BigDecimal("500.00"));
         account.setInterestRate(new BigDecimal("7.00"));
+        account.setPrematureClosureAllowed(true);
+        account.setPrematureClosurePenaltyPct(new BigDecimal("1.00"));
         account.setCreatedAt(LocalDateTime.now().minusMonths(6));
         account.setStartDate(LocalDate.now().minusMonths(6));
         account.setMaturityDate(LocalDate.now().plusMonths(6));
-
-        product = new Product();
-        product.setProductCode("FD_STD");
-        product.setPreMaturityPenaltyPct(new BigDecimal("1.00"));
     }
 
     @Test
@@ -79,8 +73,6 @@ class WithdrawalServiceTest {
 
         when(accountRepository.findById("FD001000001")).thenReturn(Optional.of(account));
         when(accountRepository.findByIdForUpdate("FD001000001")).thenReturn(Optional.of(account));
-        when(productService.getProduct("FD_STD")).thenReturn(product);
-
         WithdrawalResponse response = withdrawalService.processWithdrawal(request, "OFFICER1");
 
         assertNotNull(response);
@@ -112,5 +104,20 @@ class WithdrawalServiceTest {
         when(accountRepository.findById("FD001000001")).thenReturn(Optional.of(account));
 
         assertThrows(InvalidOperationException.class, () -> withdrawalService.processWithdrawal(request, "OFFICER1"));
+    }
+
+    @Test
+    void rejectsClosureUsingTermsSnapshottedWhenFdWasOpened() {
+        account.setPrematureClosureAllowed(false);
+        WithdrawalRequest request = new WithdrawalRequest();
+        request.setFdAccountNo("FD001000001");
+        request.setWithdrawalDate(LocalDate.now());
+        when(accountRepository.findById("FD001000001")).thenReturn(Optional.of(account));
+
+        InvalidOperationException exception = assertThrows(InvalidOperationException.class,
+                () -> withdrawalService.processWithdrawal(request, "OFFICER1"));
+
+        assertTrue(exception.getMessage().contains("not allowed"));
+        verifyNoInteractions(lifecycleService, transactionService);
     }
 }

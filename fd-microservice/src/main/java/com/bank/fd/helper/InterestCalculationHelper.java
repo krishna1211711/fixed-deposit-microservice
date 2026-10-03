@@ -43,6 +43,16 @@ public class InterestCalculationHelper {
     }
 
     public BigDecimal calculateDailyAccrual(BigDecimal principal, BigDecimal annualRate) {
+        return calculateDailyAccrual(principal, annualRate, "ACTUAL_365");
+    }
+
+    public BigDecimal calculateDailyAccrual(BigDecimal principal, BigDecimal annualRate,
+                                            String dayCountConvention) {
+        String convention = dayCountConvention == null
+                ? "ACTUAL_365" : dayCountConvention.trim().toUpperCase();
+        if (!"ACTUAL_365".equals(convention)) {
+            throw new IllegalArgumentException("Unsupported day-count convention: " + dayCountConvention);
+        }
         BigDecimal rateFraction = annualRate.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP);
         return principal.multiply(rateFraction).divide(BigDecimal.valueOf(365), 6, RoundingMode.HALF_UP);
     }

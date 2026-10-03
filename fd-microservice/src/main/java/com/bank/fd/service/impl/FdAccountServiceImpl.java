@@ -117,6 +117,8 @@ public class FdAccountServiceImpl implements FdAccountService {
         account.setPrincipalAmount(principal);
         account.setCurrentBalance(principal);
         account.setInterestRate(finalRate);
+        account.setDayCountConvention(product.getDayCountConvention() != null
+                ? product.getDayCountConvention() : "ACTUAL_365");
         account.setTenureMonths(request.getTermMonths());
         account.setCompoundingFrequency(selectedCompounding);
         account.setPayoutFrequency(selectedPayout);
@@ -132,6 +134,10 @@ public class FdAccountServiceImpl implements FdAccountService {
         account.setNextPayoutDate(FdBusinessRules.firstScheduledDate(
                 startDate, selectedPayout, maturityDate));
         account.setMaturityInstruction(maturityInstruction);
+        account.setPrematureClosureAllowed(product.getPrematureClosureAllowed() == null
+                || product.getPrematureClosureAllowed());
+        account.setPrematureClosurePenaltyPct(product.getPreMaturityPenaltyPct() != null
+                ? product.getPreMaturityPenaltyPct() : BigDecimal.ZERO);
         account.setCreatedAt(LocalDateTime.now());
         account.setCreatedBy(createdBy != null ? createdBy : "SYSTEM");
         account.setUuid(UUID.randomUUID().toString());

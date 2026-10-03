@@ -33,6 +33,9 @@ public class FdAccount {
     @Column(name = "interest_rate", precision = 5, scale = 2)
     private BigDecimal interestRate;
 
+    @Column(name = "day_count_convention", nullable = false)
+    private String dayCountConvention = "ACTUAL_365";
+
     @Column(name = "tenure_months")
     private Integer tenureMonths;
 
@@ -71,6 +74,12 @@ public class FdAccount {
 
     @Column(name = "maturity_instruction")
     private String maturityInstruction;
+
+    @Column(name = "premature_closure_allowed", nullable = false)
+    private Boolean prematureClosureAllowed = true;
+
+    @Column(name = "premature_closure_penalty_pct", precision = 5, scale = 2, nullable = false)
+    private BigDecimal prematureClosurePenaltyPct = BigDecimal.ZERO;
 
     @Column(name = "maturity_processed_at")
     private LocalDateTime maturityProcessedAt;
@@ -138,6 +147,8 @@ public class FdAccount {
     public void setCurrentBalance(BigDecimal currentBalance) { this.currentBalance = currentBalance; }
     public BigDecimal getInterestRate() { return interestRate; }
     public void setInterestRate(BigDecimal interestRate) { this.interestRate = interestRate; }
+    public String getDayCountConvention() { return dayCountConvention; }
+    public void setDayCountConvention(String dayCountConvention) { this.dayCountConvention = dayCountConvention; }
     public Integer getTenureMonths() { return tenureMonths; }
     public void setTenureMonths(Integer tenureMonths) { this.tenureMonths = tenureMonths; }
     public String getCompoundingFrequency() { return compoundingFrequency; }
@@ -164,6 +175,10 @@ public class FdAccount {
     public void setNextPayoutDate(LocalDate nextPayoutDate) { this.nextPayoutDate = nextPayoutDate; }
     public String getMaturityInstruction() { return maturityInstruction; }
     public void setMaturityInstruction(String maturityInstruction) { this.maturityInstruction = maturityInstruction; }
+    public Boolean getPrematureClosureAllowed() { return prematureClosureAllowed; }
+    public void setPrematureClosureAllowed(Boolean prematureClosureAllowed) { this.prematureClosureAllowed = prematureClosureAllowed; }
+    public BigDecimal getPrematureClosurePenaltyPct() { return prematureClosurePenaltyPct; }
+    public void setPrematureClosurePenaltyPct(BigDecimal prematureClosurePenaltyPct) { this.prematureClosurePenaltyPct = prematureClosurePenaltyPct; }
     public LocalDateTime getMaturityProcessedAt() { return maturityProcessedAt; }
     public void setMaturityProcessedAt(LocalDateTime maturityProcessedAt) { this.maturityProcessedAt = maturityProcessedAt; }
     public String getRenewalAccountNo() { return renewalAccountNo; }

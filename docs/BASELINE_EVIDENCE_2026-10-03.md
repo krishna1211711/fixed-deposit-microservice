@@ -18,7 +18,7 @@ This file records the reproducible baseline and the first remediation milestone 
 | Container JVM | Eclipse Temurin 21.0.12.1 |
 | Compiled class version | Java class major version 65 (Java 21) |
 | Database | MySQL 8.0.46 |
-| Schema management | Flyway; 17 migrations validated, schema version 17 |
+| Schema management | Flyway; 18 migrations validated, schema version 18 |
 | Event broker | Apache Kafka 3.9.1 |
 
 The gateway configuration was moved to the Spring Cloud 2025 `spring.cloud.gateway.server.webflux` property namespace. The compatibility-migration warning no longer appears at startup.
@@ -37,7 +37,7 @@ Public registration can no longer select an application role:
 
 | Verification | Result |
 |---|---|
-| FD Maven test suite | 35 tests passed; 0 failures, 0 errors, 0 skipped |
+| FD Maven test suite | 36 tests passed; 0 failures, 0 errors, 0 skipped |
 | Gateway Maven test/build | Passed |
 | Angular production build | Passed |
 | Python service compilation | Passed |
@@ -60,7 +60,19 @@ FD test breakdown at this milestone:
 - `MaturityServiceTest`: 3
 - `ProductServiceTest`: 7
 - `ReportServiceTest`: 2
-- `WithdrawalServiceTest`: 2
+- `WithdrawalServiceTest`: 3
+
+After the immutable-term snapshot correction, the FD Maven suite contains 36 passing tests with zero failures, errors, or skips.
+
+## Immutable booked terms
+
+Flyway migration V18 snapshots the following product rules into each FD account when the deposit is booked:
+
+- day-count convention;
+- whether premature closure is allowed;
+- the premature-closure penalty percentage.
+
+Existing account rows were backfilled from their products. MySQL verification confirmed all three columns are non-null, schema version 18 is successful, and the existing demonstration FDs hold `ACTUAL_365`, premature closure enabled, and their booked 1.00% penalty. Withdrawal processing now reads the account snapshot instead of the mutable product definition, so a later product edit cannot retroactively change an active FD contract.
 
 ## Container build correction
 

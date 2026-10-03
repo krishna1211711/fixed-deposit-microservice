@@ -24,7 +24,8 @@ public class InterestEngineServiceImpl implements InterestEngineService {
     public BigDecimal calculateDailyAccrualForAccount(FdAccount account, LocalDate date) {
         BigDecimal balance = account.getCurrentBalance() != null
                 ? account.getCurrentBalance() : account.getPrincipalAmount();
-        return interestCalculationHelper.calculateDailyAccrual(balance, account.getInterestRate());
+        return interestCalculationHelper.calculateDailyAccrual(
+                balance, account.getInterestRate(), account.getDayCountConvention());
     }
 
     @Override

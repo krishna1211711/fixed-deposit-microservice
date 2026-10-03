@@ -12,6 +12,7 @@ public class FdAccountResponse {
     private BigDecimal principalAmount;
     private BigDecimal currentBalance;
     private BigDecimal interestRate;
+    private String dayCountConvention;
     private Integer tenureMonths;
     private String compoundingFrequency;
     private String payoutFrequency;
@@ -25,6 +26,8 @@ public class FdAccountResponse {
     private LocalDate lastPayoutDate;
     private LocalDate nextPayoutDate;
     private String maturityInstruction;
+    private Boolean prematureClosureAllowed;
+    private BigDecimal prematureClosurePenaltyPct;
     private LocalDateTime maturityProcessedAt;
     private String renewalAccountNo;
     private LocalDateTime createdAt;
@@ -53,6 +56,8 @@ public class FdAccountResponse {
 
     public BigDecimal getInterestRate() { return interestRate; }
     public void setInterestRate(BigDecimal interestRate) { this.interestRate = interestRate; }
+    public String getDayCountConvention() { return dayCountConvention; }
+    public void setDayCountConvention(String dayCountConvention) { this.dayCountConvention = dayCountConvention; }
 
     public Integer getTenureMonths() { return tenureMonths; }
     public void setTenureMonths(Integer tenureMonths) { this.tenureMonths = tenureMonths; }
@@ -84,6 +89,10 @@ public class FdAccountResponse {
     public void setNextPayoutDate(LocalDate value) { this.nextPayoutDate = value; }
     public String getMaturityInstruction() { return maturityInstruction; }
     public void setMaturityInstruction(String value) { this.maturityInstruction = value; }
+    public Boolean getPrematureClosureAllowed() { return prematureClosureAllowed; }
+    public void setPrematureClosureAllowed(Boolean value) { this.prematureClosureAllowed = value; }
+    public BigDecimal getPrematureClosurePenaltyPct() { return prematureClosurePenaltyPct; }
+    public void setPrematureClosurePenaltyPct(BigDecimal value) { this.prematureClosurePenaltyPct = value; }
     public LocalDateTime getMaturityProcessedAt() { return maturityProcessedAt; }
     public void setMaturityProcessedAt(LocalDateTime value) { this.maturityProcessedAt = value; }
     public String getRenewalAccountNo() { return renewalAccountNo; }

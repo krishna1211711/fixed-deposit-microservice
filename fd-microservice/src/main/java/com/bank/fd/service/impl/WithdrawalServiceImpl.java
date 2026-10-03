@@ -5,7 +5,6 @@ import com.bank.fd.dto.response.WithdrawalResponse;
 import com.bank.fd.entity.FdAccount;
 import com.bank.fd.entity.FdInterestTransaction;
 import com.bank.fd.entity.FdStatement;
-import com.bank.fd.entity.Product;
 import com.bank.fd.event.EventPublisher;
 import com.bank.fd.exception.FdNotFoundException;
 import com.bank.fd.exception.InvalidOperationException;
@@ -14,7 +13,6 @@ import com.bank.fd.repository.FdInterestTransactionRepository;
 import com.bank.fd.repository.FdStatementRepository;
 import com.bank.fd.service.FdTransactionService;
 import com.bank.fd.service.InterestLifecycleService;
-import com.bank.fd.service.ProductService;
 import com.bank.fd.service.WithdrawalService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +26,6 @@ import java.util.List;
 @Transactional
 public class WithdrawalServiceImpl implements WithdrawalService {
     private final FdAccountRepository accountRepository;
-    private final ProductService productService;
     private final InterestLifecycleService lifecycleService;
     private final FdTransactionService transactionService;
     private final EventPublisher eventPublisher;
@@ -36,14 +33,12 @@ public class WithdrawalServiceImpl implements WithdrawalService {
     private final FdInterestTransactionRepository interestRepository;
 
     public WithdrawalServiceImpl(FdAccountRepository accountRepository,
-                                 ProductService productService,
                                  InterestLifecycleService lifecycleService,
                                  FdTransactionService transactionService,
                                  EventPublisher eventPublisher,
                                  FdStatementRepository statementRepository,
                                  FdInterestTransactionRepository interestRepository) {
         this.accountRepository = accountRepository;
-        this.productService = productService;
         this.lifecycleService = lifecycleService;
         this.transactionService = transactionService;
         this.eventPublisher = eventPublisher;
@@ -68,9 +63,8 @@ public class WithdrawalServiceImpl implements WithdrawalService {
                     + initial.getMaturityDate());
         }
 
-        Product product = productService.getProduct(initial.getProductCode());
-        if (Boolean.FALSE.equals(product.getPrematureClosureAllowed())) {
-            throw new InvalidOperationException("Premature closure is not allowed for product " + product.getProductCode());
+        if (Boolean.FALSE.equals(initial.getPrematureClosureAllowed())) {
+            throw new InvalidOperationException("Premature closure is not allowed for FD " + initial.getFdAccountNo());
         }
 
         lifecycleService.processAccountThroughDate(initial.getFdAccountNo(), withdrawalDate);
@@ -81,8 +75,8 @@ public class WithdrawalServiceImpl implements WithdrawalService {
         BigDecimal grossValue = balanceBeforeClosure.add(pendingAccrued);
         BigDecimal grossInterest = grossValue.subtract(account.getPrincipalAmount()).max(BigDecimal.ZERO);
 
-        BigDecimal penaltyPct = product.getPreMaturityPenaltyPct() != null
-                ? product.getPreMaturityPenaltyPct() : BigDecimal.ZERO;
+        BigDecimal penaltyPct = account.getPrematureClosurePenaltyPct() != null
+                ? account.getPrematureClosurePenaltyPct() : BigDecimal.ZERO;
         BigDecimal penaltyAmount = grossInterest.multiply(penaltyPct)
                 .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
         BigDecimal netInterest = grossInterest.subtract(penaltyAmount);
