@@ -1,6 +1,6 @@
 # Fixed Deposit (FD) Microservice
 
-A production-grade, domain-driven Core Banking Microservice for managing the complete lifecycle of Fixed Deposits. Built with **Spring Boot 3.2.4** and **Java 17**.
+A production-grade, domain-driven Core Banking Microservice for managing the complete lifecycle of Fixed Deposits. Built with **Spring Boot 3.5.16** and compiled for **Java 21 LTS**.
 
 ---
 

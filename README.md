@@ -20,7 +20,7 @@ Each service has its own Dockerfile. Kubernetes manifests provide separate deplo
 
 ## Technology stack
 
-- Java 17, Spring Boot 3.2, Spring Security, JPA, Flyway
+- Java 21 LTS, Spring Boot 3.5, Spring Security, JPA, Flyway
 - Spring Cloud Gateway and JWT bearer authentication
 - Angular 21 with route guards, interceptors, and English and Hindi resources
 - Python 3.10, Flask, Pandas, ReportLab, and Matplotlib

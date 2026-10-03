@@ -9,36 +9,38 @@ spring:
     name: api-gateway
   cloud:
     gateway:
-      routes:
-        - id: report-health-route
-          uri: ${REPORT_SERVICE_URI:http://localhost:5000}
-          predicates:
-            - Path=/reports/health
-          filters:
-            - SetPath=/health
-        - id: report-route
-          uri: ${REPORT_SERVICE_URI:http://localhost:5000}
-          predicates:
-            - Path=/reports/**
-          filters:
-            - JwtValidationFilter
-            - StripPrefix=1
-        - id: auth-route
-          uri: ${FD_SERVICE_URI:http://localhost:8080}
-          predicates:
-            - Path=/api/auth/**
-        - id: api-route
-          uri: ${FD_SERVICE_URI:http://localhost:8080}
-          predicates:
-            - Path=/api/**
-          filters:
-            - JwtValidationFilter
-        - id: manual-report-compatibility-route
-          uri: ${FD_SERVICE_URI:http://localhost:8080}
-          predicates:
-            - Path=/report/**
-          filters:
-            - JwtValidationFilter
+      server:
+        webflux:
+          routes:
+            - id: report-health-route
+              uri: ${REPORT_SERVICE_URI:http://localhost:5000}
+              predicates:
+                - Path=/reports/health
+              filters:
+                - SetPath=/health
+            - id: report-route
+              uri: ${REPORT_SERVICE_URI:http://localhost:5000}
+              predicates:
+                - Path=/reports/**
+              filters:
+                - JwtValidationFilter
+                - StripPrefix=1
+            - id: auth-route
+              uri: ${FD_SERVICE_URI:http://localhost:8080}
+              predicates:
+                - Path=/api/auth/**
+            - id: api-route
+              uri: ${FD_SERVICE_URI:http://localhost:8080}
+              predicates:
+                - Path=/api/**
+              filters:
+                - JwtValidationFilter
+            - id: manual-report-compatibility-route
+              uri: ${FD_SERVICE_URI:http://localhost:8080}
+              predicates:
+                - Path=/report/**
+              filters:
+                - JwtValidationFilter
 
 management:
   endpoints:
