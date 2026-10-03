@@ -6,9 +6,11 @@
 **Target runtime:** Java 21 LTS (Eclipse Temurin), Spring Boot 3.5.x, Spring Cloud 2025.0.x  
 **Migration style:** Incremental strangler migration; no big-bang rewrite
 
+**Progress at 2026-10-03:** The recovery baseline is committed and pushed. The FD service and gateway now compile for and run on Java 21 with Spring Boot 3.5.16; the gateway uses Spring Cloud 2025.0.3. Public-registration role escalation is closed, and Flyway V18 snapshots day-count and premature-closure terms onto each booked FD. The historical audit below explains the starting state; current verification evidence is in `BASELINE_EVIDENCE_2026-10-03.md`.
+
 ## 1. Executive decision
 
-The repository is not currently a Java 21 project. Both Java modules, their Docker images, CI, and documentation currently target Java 17. The remediation target will be Java 21, but the Java upgrade must be performed as a controlled platform phase rather than mixed into financial-logic changes.
+The repository began this remediation as a Java 17 project. The controlled platform phase has now moved both Java modules, their Docker images, CI, and documentation to Java 21 without mixing that migration into the subsequent financial-term changes.
 
 The existing FD lifecycle work is valuable and should be preserved. The target is not to rewrite the application. The target is to stabilize it, close correctness and security gaps, establish reliable contracts, and then extract clear bounded contexts into independently deployable services with database-per-service ownership.
 
