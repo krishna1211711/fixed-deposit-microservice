@@ -55,6 +55,20 @@ public class KafkaLifecycleEventBridge {
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onInterestCapitalized(InterestCapitalizedEvent event) {
+        publish("INTEREST_CAPITALIZED", event.getCustomerId(), event.getFdAccountNo(), event.getAmount(),
+                "FD Interest Capitalized: " + event.getFdAccountNo(),
+                "Accrued interest was capitalized into fixed deposit account " + event.getFdAccountNo() + ".");
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onInterestPaid(InterestPaidEvent event) {
+        publish("INTEREST_PAID", event.getCustomerId(), event.getFdAccountNo(), event.getAmount(),
+                "FD Interest Paid: " + event.getFdAccountNo(),
+                "Interest was paid from fixed deposit account " + event.getFdAccountNo() + ".");
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onMatured(FDMaturedEvent event) {
         publish("FD_MATURED", event.getCustomerId(), event.getFdAccountNo(), event.getMaturityAmount(),
                 "Fixed Deposit Matured: " + event.getFdAccountNo(),
@@ -63,9 +77,16 @@ public class KafkaLifecycleEventBridge {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onWithdrawn(FDWithdrawnEvent event) {
-        publish("FD_WITHDRAWN", event.getCustomerId(), event.getFdAccountNo(), event.getWithdrawalAmount(),
+        publish("FD_PREMATURELY_CLOSED", event.getCustomerId(), event.getFdAccountNo(), event.getWithdrawalAmount(),
                 "Fixed Deposit Closed: " + event.getFdAccountNo(),
                 "Withdrawal and closure have been processed for fixed deposit account " + event.getFdAccountNo() + ".");
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onRenewed(FDRenewedEvent event) {
+        publish("FD_RENEWED", event.getCustomerId(), event.getRenewalAccountNo(), event.getAmount(),
+                "Fixed Deposit Renewed: " + event.getRenewalAccountNo(),
+                "Fixed deposit " + event.getFdAccountNo() + " was renewed as " + event.getRenewalAccountNo() + ".");
     }
 
     private void publish(String eventType, String customerId, String fdAccountNo, BigDecimal amount,
@@ -73,7 +94,7 @@ public class KafkaLifecycleEventBridge {
         String currency = accountRepository.findById(fdAccountNo).map(FdAccount::getCurrency).orElse("INR");
         String message = summary + " Amount: " + currency + " " + amount + ".";
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("schemaVersion", 1);
+        payload.put("schemaVersion", "1.0");
         payload.put("eventId", UUID.randomUUID().toString());
         payload.put("occurredAt", Instant.now().toString());
         payload.put("eventType", eventType);

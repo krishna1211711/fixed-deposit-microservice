@@ -407,6 +407,21 @@ components:
           items:
             type: string
           description: Applicable customer category adjustments (e.g. SENIOR_CITIZEN, EMPLOYEE)
+        compoundingFrequency:
+          type: string
+          enum: [MONTHLY, QUARTERLY, HALF_YEARLY, YEARLY]
+          description: Must be one of the selected product's allowed capitalization options
+        payoutFrequency:
+          type: string
+          enum: [MONTHLY, QUARTERLY, HALF_YEARLY, YEARLY, MATURITY]
+          default: MATURITY
+        maturityInstruction:
+          type: string
+          enum: [PAYOUT, RENEW_PRINCIPAL, RENEW_PRINCIPAL_AND_INTEREST]
+          default: PAYOUT
+        startDate:
+          type: string
+          format: date
 
     FdAccountResponse:
       type: object
@@ -423,6 +438,9 @@ components:
         principalAmount:
           type: number
           format: double
+        currentBalance:
+          type: number
+          format: double
         interestRate:
           type: number
           format: double
@@ -432,9 +450,18 @@ components:
         compoundingFrequency:
           type: string
           enum: [MONTHLY, QUARTERLY, HALF_YEARLY, YEARLY]
+        payoutFrequency:
+          type: string
+          enum: [MONTHLY, QUARTERLY, HALF_YEARLY, YEARLY, MATURITY]
+        maturityInstruction:
+          type: string
+          enum: [PAYOUT, RENEW_PRINCIPAL, RENEW_PRINCIPAL_AND_INTEREST]
         status:
           type: string
-          enum: [ACTIVE, CLOSED, PREMATURE_CLOSED]
+          enum: [ACTIVE, CLOSED, PREMATURE_CLOSED, RENEWED]
+        startDate:
+          type: string
+          format: date
         maturityDate:
           type: string
           format: date
@@ -505,7 +532,7 @@ components:
           type: string
         txnType:
           type: string
-          enum: [DEPOSIT, INTEREST_CREDIT, WITHDRAWAL, MATURITY_PAYOUT]
+          enum: [DEPOSIT, INTEREST_ACCRUAL, INTEREST_CAPITALIZATION, INTEREST_PAYOUT, FD_MATURITY, FD_RENEWAL, PREMATURE_CLOSURE, PENALTY]
         amount:
           type: number
           format: double
@@ -522,6 +549,11 @@ components:
         txnTimestamp:
           type: string
           format: date-time
+        businessDate:
+          type: string
+          format: date
+        referenceId:
+          type: string
         remarks:
           type: string
         uuid:
@@ -541,7 +573,16 @@ components:
         openingBalance:
           type: number
           format: double
-        interestCredited:
+        interestAccrued:
+          type: number
+          format: double
+        interestCapitalized:
+          type: number
+          format: double
+        interestPaid:
+          type: number
+          format: double
+        accruedInterest:
           type: number
           format: double
         closingBalance:

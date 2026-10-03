@@ -23,7 +23,10 @@ export class FdCreateComponent implements OnInit {
     principalAmount: null as number | null,
     termMonths: null as number | null,
     branchCode: '',
-    currency: 'INR'
+    currency: 'INR',
+    compoundingFrequency: '' as string,
+    payoutFrequency: 'MATURITY',
+    maturityInstruction: 'PAYOUT'
   };
 
   selectedProduct: Product | null = null;
@@ -52,6 +55,15 @@ export class FdCreateComponent implements OnInit {
     this.selectedProduct = this.products.find(p => p.productCode === this.request.productCode) || null;
     if (this.selectedProduct) {
       this.request.currency = this.selectedProduct.currency;
+      const compounding = this.selectedProduct.allowedCompoundingFrequencies?.length
+        ? this.selectedProduct.allowedCompoundingFrequencies
+        : [this.selectedProduct.compoundingFrequency];
+      const payouts = this.selectedProduct.allowedPayoutFrequencies?.length
+        ? this.selectedProduct.allowedPayoutFrequencies : ['MATURITY'];
+      this.selectedProduct.allowedCompoundingFrequencies = compounding;
+      this.selectedProduct.allowedPayoutFrequencies = payouts as Product['allowedPayoutFrequencies'];
+      this.request.compoundingFrequency = compounding[0];
+      this.request.payoutFrequency = payouts.includes('MATURITY' as any) ? 'MATURITY' : payouts[0];
     }
   }
 

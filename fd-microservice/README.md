@@ -7,12 +7,10 @@ A production-grade, domain-driven Core Banking Microservice for managing the com
 ## 🏛️ Architecture & Key Highlights
 
 - **Insert-Only Financial Ledger:** Immutable ledger entries for deposits, interest accruals, premature withdrawals, penalties, and maturity payouts.
-- **Dynamic Interest Engine:** Calculates Simple & Compound interest across Monthly, Quarterly, Half-Yearly, and Yearly compounding frequencies with product-capped category add-ons (Senior Citizen, Staff).
+- **Realistic Interest Lifecycle:** Accrues interest daily under ACTUAL/365 without changing principal balance, then capitalizes or pays it on product-permitted calendar schedules.
+- **Stable Contract Terms:** Each FD snapshots its rate, tenure, compounding frequency, payout frequency, and maturity instruction when opened.
 - **Stateless Role-Based Security:** JWT authentication with embedded `customerId` claims for fast, zero-lookup customer authorization.
-- **Asynchronous Lifecycle Events:** Non-blocking event listeners handle notifications strictly on:
-  1. `FD_OPENED` (Account creation)
-  2. `FD_MATURED` (Automatic maturity payout)
-  3. `FD_WITHDRAWN` (Premature withdrawal & closure)
+- **Asynchronous Lifecycle Events:** Kafka/direct listeners cover `FD_OPENED`, `INTEREST_ACCRUED`, `INTEREST_CAPITALIZED`, `INTEREST_PAID`, `FD_MATURED`, `FD_RENEWED`, and `FD_PREMATURELY_CLOSED`.
 - **Automated Schedulers:** Nightly interest accruals, maturity payouts, and monthly statement generation jobs.
 
 ---
@@ -61,14 +59,14 @@ All secured endpoints require the HTTP header:
 
 ### 3. FD Account Management (`/api/fd`)
 - `POST /api/fd/account/create` (`BANK_OFFICER`, `ADMIN`) — Opens an FD account and books the initial deposit ledger record.
-- `GET /api/fd/account/{fdAccountNo}` — Retrieves detailed account status and accrued interest.
+- `GET /api/fd/account/{fdAccountNo}` — Retrieves original principal, current balance, unsettled accrued interest, schedules, and maturity terms.
 - `GET /api/fd/accounts/my` (`CUSTOMER`) — Returns all FD accounts belonging to the authenticated customer.
 - `GET /api/fd/accounts/all` (`BANK_OFFICER`, `ADMIN`) — Lists all bank FD accounts.
 - `POST /api/fd/account/manual-close` (`BANK_OFFICER`, `ADMIN`) — Closes a matured FD (rejects premature accounts).
 
 ### 4. Financial Ledger & Transactions (`/api/fd`)
-- `GET /api/fd/account/{fdAccountNo}/transactions` — Full double-entry transaction history (`DEPOSIT`, `WITHDRAWAL`, `PENALTY`, `MATURITY_PAYOUT`).
-- `GET /api/fd/account/{fdAccountNo}/statements` — Monthly statement history.
+- `GET /api/fd/account/{fdAccountNo}/transactions` — Full event ledger (`DEPOSIT`, `INTEREST_ACCRUAL`, `INTEREST_CAPITALIZATION`, `INTEREST_PAYOUT`, `FD_MATURITY`, `FD_RENEWAL`, `PREMATURE_CLOSURE`, `PENALTY`).
+- `GET /api/fd/account/{fdAccountNo}/statements` — Statements separating accrued, capitalized, paid, closing balance, and unsettled accrued interest.
 - `POST /api/fd/account/withdraw` (`CUSTOMER`, `BANK_OFFICER`) — Prematurely closes an FD, applies penalty, and creates separate payout & penalty ledger entries.
 
 ### 5. Product Management (`/api/product`)
@@ -91,7 +89,7 @@ All secured endpoints require the HTTP header:
 ```bash
 mvn clean test
 ```
-- **Total Automated Tests:** 27
+- **Total Automated Tests:** 34
 - **Test Pass Rate:** 100% (Unit, Repository, Service, and MockMvc E2E integration tests)
 
 ---

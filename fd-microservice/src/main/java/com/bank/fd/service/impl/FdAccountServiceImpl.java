@@ -11,6 +11,7 @@ import com.bank.fd.exception.FdNotFoundException;
 import com.bank.fd.helper.AccountNumberGenerator;
 import com.bank.fd.helper.InterestCalculationHelper;
 import com.bank.fd.helper.CurrencyRules;
+import com.bank.fd.helper.FdBusinessRules;
 import com.bank.fd.mapper.FdAccountMapper;
 import com.bank.fd.repository.FdAccountRepository;
 import com.bank.fd.repository.FdStatementRepository;
@@ -27,6 +28,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.Set;
 
 @Service
 @Transactional
@@ -74,6 +76,25 @@ public class FdAccountServiceImpl implements FdAccountService {
         }
         BigDecimal principal = CurrencyRules.normalizeAmount(request.getPrincipalAmount(), currency);
 
+        Set<String> allowedCompounding = product.getAllowedCompoundingFrequencies();
+        if (allowedCompounding == null || allowedCompounding.isEmpty()) {
+            allowedCompounding = Set.of(FdBusinessRules.normalizeFrequency(product.getCompoundingFrequency()));
+        }
+        Set<String> allowedPayout = product.getAllowedPayoutFrequencies();
+        if (allowedPayout == null || allowedPayout.isEmpty()) {
+            allowedPayout = Set.of("MATURITY");
+        }
+        String selectedCompounding = FdBusinessRules.requireCompounding(
+                request.getCompoundingFrequency() != null
+                        ? request.getCompoundingFrequency() : product.getCompoundingFrequency(),
+                allowedCompounding);
+        String selectedPayout = FdBusinessRules.requirePayout(
+                request.getPayoutFrequency() != null ? request.getPayoutFrequency() : "MATURITY",
+                allowedPayout);
+        String maturityInstruction = FdBusinessRules.requireMaturityInstruction(request.getMaturityInstruction());
+        LocalDate startDate = request.getStartDate() != null ? request.getStartDate() : LocalDate.now();
+        LocalDate maturityDate = startDate.plusMonths(request.getTermMonths());
+
         // Apply category rate addons (e.g. SENIOR_CITIZEN, STAFF) capped at rateCapAddon
         BigDecimal finalRate = interestCalculationHelper.applyCategoryAddons(
                 product.getMinRate(),
@@ -94,12 +115,23 @@ public class FdAccountServiceImpl implements FdAccountService {
         account.setProductCode(request.getProductCode());
         account.setCurrency(currency);
         account.setPrincipalAmount(principal);
+        account.setCurrentBalance(principal);
         account.setInterestRate(finalRate);
         account.setTenureMonths(request.getTermMonths());
-        account.setCompoundingFrequency(product.getCompoundingFrequency());
+        account.setCompoundingFrequency(selectedCompounding);
+        account.setPayoutFrequency(selectedPayout);
         account.setStatus("ACTIVE");
-        account.setMaturityDate(LocalDate.now().plusMonths(request.getTermMonths()));
+        account.setStartDate(startDate);
+        account.setMaturityDate(maturityDate);
         account.setAccruedInterest(BigDecimal.ZERO);
+        account.setLastAccrualDate(startDate.minusDays(1));
+        account.setLastCapitalizationDate(startDate);
+        account.setNextCapitalizationDate(FdBusinessRules.firstScheduledDate(
+                startDate, selectedCompounding, maturityDate));
+        account.setLastPayoutDate(startDate);
+        account.setNextPayoutDate(FdBusinessRules.firstScheduledDate(
+                startDate, selectedPayout, maturityDate));
+        account.setMaturityInstruction(maturityInstruction);
         account.setCreatedAt(LocalDateTime.now());
         account.setCreatedBy(createdBy != null ? createdBy : "SYSTEM");
         account.setUuid(UUID.randomUUID().toString());

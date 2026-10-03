@@ -6,8 +6,8 @@ let currentUser = JSON.parse(localStorage.getItem('fd_user') || 'null');
 
 // Product Cache
 let availableProducts = [
-  { productCode: 'FD_STD', productName: 'Standard Fixed Deposit', minRate: 5.00, maxRate: 7.50, minDeposit: 10000, minMonths: 3, maxMonths: 36, penaltyPct: 1.00, compounding: 'QUARTERLY' },
-  { productCode: 'FD_PREM', productName: 'Premium Fixed Deposit', minRate: 6.00, maxRate: 8.50, minDeposit: 50000, minMonths: 12, maxMonths: 60, penaltyPct: 1.00, compounding: 'QUARTERLY' }
+  { productCode: 'FD_STD', productName: 'Standard Fixed Deposit', minRate: 5.00, maxRate: 7.50, minDeposit: 10000, minMonths: 3, maxMonths: 36, penaltyPct: 1.00, compoundingFrequency: 'QUARTERLY', allowedCompoundingFrequencies: ['MONTHLY','QUARTERLY','HALF_YEARLY','YEARLY'], allowedPayoutFrequencies: ['MONTHLY','QUARTERLY','HALF_YEARLY','YEARLY','MATURITY'] },
+  { productCode: 'FD_PREM', productName: 'Premium Fixed Deposit', minRate: 6.00, maxRate: 8.50, minDeposit: 50000, minMonths: 12, maxMonths: 60, penaltyPct: 1.00, compoundingFrequency: 'QUARTERLY', allowedCompoundingFrequencies: ['MONTHLY','QUARTERLY','HALF_YEARLY','YEARLY'], allowedPayoutFrequencies: ['MONTHLY','QUARTERLY','HALF_YEARLY','YEARLY','MATURITY'] }
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -120,6 +120,21 @@ function populateProductDropdowns() {
   });
 
   updateDynamicRatePreview();
+  populateProductTerms();
+}
+
+function populateProductTerms() {
+  const product = availableProducts.find(p => p.productCode === document.getElementById('input-product')?.value)
+    || availableProducts[0];
+  const compounding = product?.allowedCompoundingFrequencies?.length
+    ? product.allowedCompoundingFrequencies : [product?.compoundingFrequency || 'QUARTERLY'];
+  const payouts = product?.allowedPayoutFrequencies?.length
+    ? product.allowedPayoutFrequencies : ['MATURITY'];
+  const label = value => value.replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+  document.getElementById('input-compounding').innerHTML = compounding
+    .map(value => `<option value="${value}">${label(value)}</option>`).join('');
+  document.getElementById('input-payout').innerHTML = payouts
+    .map(value => `<option value="${value}" ${value === 'MATURITY' ? 'selected' : ''}>${label(value)}</option>`).join('');
 }
 
 // Setup Event Listeners
@@ -129,6 +144,7 @@ function setupEventListeners() {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', updateDynamicRatePreview);
   });
+  document.getElementById('input-product')?.addEventListener('change', populateProductTerms);
 
   document.querySelectorAll('.category-checkbox').forEach(cb => {
     cb.addEventListener('change', updateDynamicRatePreview);
@@ -168,8 +184,8 @@ async function updateDynamicRatePreview() {
   let effectiveRate = baseRate + addon;
   if (product.maxRate && effectiveRate > product.maxRate) effectiveRate = product.maxRate;
 
-  // Local estimate of compound interest (Quarterly)
-  const compoundingsPerYear = 4;
+  const selectedFrequency = document.getElementById('input-compounding')?.value || 'QUARTERLY';
+  const compoundingsPerYear = { MONTHLY: 12, QUARTERLY: 4, HALF_YEARLY: 2, YEARLY: 1 }[selectedFrequency] || 4;
   const timeInYears = termMonths / 12;
   const ratePerPeriod = (effectiveRate / 100) / compoundingsPerYear;
   const totalPeriods = compoundingsPerYear * timeInYears;
@@ -197,6 +213,9 @@ async function handleAccountCreation(e) {
   const principalAmount = parseFloat(document.getElementById('input-principal').value);
   const termMonths = parseInt(document.getElementById('input-months').value);
   const branchCode = document.getElementById('input-branch').value.trim() || '001';
+  const compoundingFrequency = document.getElementById('input-compounding').value;
+  const payoutFrequency = document.getElementById('input-payout').value;
+  const maturityInstruction = document.getElementById('input-maturity-instruction').value;
 
   const categories = [];
   document.querySelectorAll('.category-checkbox:checked').forEach(cb => categories.push(cb.value));
@@ -208,6 +227,9 @@ async function handleAccountCreation(e) {
     termMonths,
     branchCode,
     currency: 'INR',
+    compoundingFrequency,
+    payoutFrequency,
+    maturityInstruction,
     categories
   };
 
@@ -226,6 +248,7 @@ async function handleAccountCreation(e) {
       displayCreationSuccess(data);
       showToast('FD Account successfully created!', 'success');
       document.getElementById('fd-create-form').reset();
+      populateProductTerms();
       updateDynamicRatePreview();
     } else {
       showToast(data.message || 'Failed to create account', 'error');
@@ -280,7 +303,7 @@ async function loadMyAccounts() {
   if (!tableBody) return;
 
   if (!currentToken) {
-    tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Please log in to view your FD accounts.</td></tr>`;
+    tableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Please log in to view your FD accounts.</td></tr>`;
     return;
   }
 
@@ -293,7 +316,7 @@ async function loadMyAccounts() {
     const accounts = await res.json();
 
     if (!res.ok || accounts.length === 0) {
-      tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No Fixed Deposit accounts found for your profile.</td></tr>`;
+      tableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">No Fixed Deposit accounts found for your profile.</td></tr>`;
       return;
     }
 
@@ -301,6 +324,8 @@ async function loadMyAccounts() {
       <tr>
         <td><span class="mono-tag">${a.fdAccountNo}</span></td>
         <td><strong>₹${a.principalAmount.toLocaleString('en-IN')}</strong></td>
+        <td><strong>₹${(a.currentBalance || a.principalAmount).toLocaleString('en-IN')}</strong></td>
+        <td>₹${(a.accruedInterest || 0).toLocaleString('en-IN')}</td>
         <td>${a.interestRate}% p.a.</td>
         <td>${a.tenureMonths} Mo</td>
         <td>${a.maturityDate}</td>
@@ -350,7 +375,7 @@ async function loadAllAccounts() {
       <tr>
         <td><span class="mono-tag">${a.fdAccountNo}</span></td>
         <td><span class="mono-tag">${a.customerId}</span></td>
-        <td><strong>₹${a.principalAmount.toLocaleString('en-IN')}</strong></td>
+        <td><strong>₹${(a.currentBalance || a.principalAmount).toLocaleString('en-IN')}</strong><br><small>Original ₹${a.principalAmount.toLocaleString('en-IN')}</small></td>
         <td>${a.interestRate}%</td>
         <td>₹${(a.accruedInterest || 0).toLocaleString('en-IN')}</td>
         <td>${getStatusBadge(a.status)}</td>
@@ -500,7 +525,7 @@ async function viewStatements(fdAccountNo) {
   const modal = document.getElementById('stmt-modal');
   const tbody = document.getElementById('stmt-table-body');
   document.getElementById('stmt-modal-acct').textContent = fdAccountNo;
-  tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">Loading statements...</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="7" style="text-align: center;">Loading statements...</td></tr>`;
   modal.classList.add('show');
 
   try {
@@ -509,7 +534,7 @@ async function viewStatements(fdAccountNo) {
     });
     const stmts = await res.json();
     if (!res.ok || stmts.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No statements generated yet. Run monthly batch job.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No statements generated yet. Run the statement batch job.</td></tr>`;
       return;
     }
 
@@ -517,12 +542,15 @@ async function viewStatements(fdAccountNo) {
       <tr>
         <td>${s.statementDate}</td>
         <td>₹${s.openingBalance?.toLocaleString('en-IN')}</td>
-        <td style="color: #34d399;">+ ₹${s.interestCredited?.toLocaleString('en-IN')}</td>
+        <td style="color: #60a5fa;">₹${(s.interestAccrued || 0).toLocaleString('en-IN')}</td>
+        <td style="color: #34d399;">₹${(s.interestCapitalized || 0).toLocaleString('en-IN')}</td>
+        <td style="color: #fbbf24;">₹${(s.interestPaid || 0).toLocaleString('en-IN')}</td>
         <td><strong>₹${s.closingBalance?.toLocaleString('en-IN')}</strong></td>
+        <td>₹${(s.accruedInterest || 0).toLocaleString('en-IN')}</td>
       </tr>
     `).join('');
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--danger);">Failed to load statements.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--danger);">Failed to load statements.</td></tr>`;
   }
 }
 

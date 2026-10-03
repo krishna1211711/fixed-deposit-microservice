@@ -46,4 +46,25 @@ public class EventListenerHandler {
     public void handleInterestAccruedEvent(InterestAccruedEvent event) {
         notificationService.sendInterestAccruedNotification(event.getCustomerId(), event.getFdAccountNo(), event.getInterestAmount());
     }
+
+    @Async
+    @EventListener
+    public void handleInterestCapitalizedEvent(InterestCapitalizedEvent event) {
+        notificationService.sendInterestCapitalizedNotification(
+                event.getCustomerId(), event.getFdAccountNo(), event.getAmount());
+    }
+
+    @Async
+    @EventListener
+    public void handleInterestPaidEvent(InterestPaidEvent event) {
+        notificationService.sendInterestPaidNotification(
+                event.getCustomerId(), event.getFdAccountNo(), event.getAmount());
+    }
+
+    @Async
+    @EventListener
+    public void handleFdRenewedEvent(FDRenewedEvent event) {
+        notificationService.sendRenewalNotification(event.getCustomerId(), event.getFdAccountNo(),
+                event.getRenewalAccountNo(), event.getAmount());
+    }
 }

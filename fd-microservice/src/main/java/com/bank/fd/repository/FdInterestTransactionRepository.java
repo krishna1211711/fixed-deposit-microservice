@@ -15,6 +15,8 @@ public interface FdInterestTransactionRepository extends JpaRepository<FdInteres
     List<FdInterestTransaction> findByFdAccountNoOrderByAccrualDateDesc(String fdAccountNo);
 
     Optional<FdInterestTransaction> findByFdAccountNoAndAccrualDate(String fdAccountNo, LocalDate date);
+    List<FdInterestTransaction> findByFdAccountNoAndSettlementTypeAndAccrualDateLessThanEqual(
+            String fdAccountNo, String settlementType, LocalDate date);
 
     /**
      * Sums the daily interest accrual amounts for a given FD account within a date range.

@@ -5,6 +5,7 @@ import com.bank.fd.entity.FdStatement;
 import com.bank.fd.repository.FdAccountRepository;
 import com.bank.fd.repository.FdInterestTransactionRepository;
 import com.bank.fd.repository.FdStatementRepository;
+import com.bank.fd.repository.FdTransactionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -23,13 +24,16 @@ public class StatementGenerationJob {
     private final FdAccountRepository accountRepository;
     private final FdStatementRepository statementRepository;
     private final FdInterestTransactionRepository interestTransactionRepository;
+    private final FdTransactionRepository transactionRepository;
 
     public StatementGenerationJob(FdAccountRepository accountRepository,
                                   FdStatementRepository statementRepository,
-                                  FdInterestTransactionRepository interestTransactionRepository) {
+                                  FdInterestTransactionRepository interestTransactionRepository,
+                                  FdTransactionRepository transactionRepository) {
         this.accountRepository = accountRepository;
         this.statementRepository = statementRepository;
         this.interestTransactionRepository = interestTransactionRepository;
+        this.transactionRepository = transactionRepository;
     }
 
     @Scheduled(cron = "0 0 2 * * ?")
@@ -51,26 +55,33 @@ public class StatementGenerationJob {
                 if (statementRepository.findByFdAccountNoAndStatementDate(account.getFdAccountNo(), date).isPresent()) {
                     continue;
                 }
-                BigDecimal interestCredited = interestTransactionRepository.sumInterestBetween(
+                BigDecimal interestAccrued = interestTransactionRepository.sumInterestBetween(
                         account.getFdAccountNo(), date, date);
-                if (interestCredited == null) {
-                    interestCredited = BigDecimal.ZERO;
-                }
-
-                BigDecimal openingBalance = account.getPrincipalAmount();
-                BigDecimal closingBalance = openingBalance.add(interestCredited);
+                if (interestAccrued == null) interestAccrued = BigDecimal.ZERO;
+                BigDecimal capitalized = amountFor(account.getFdAccountNo(), date, "INTEREST_CAPITALIZATION");
+                BigDecimal paid = amountFor(account.getFdAccountNo(), date, "INTEREST_PAYOUT");
+                BigDecimal closingBalance = account.getCurrentBalance();
+                BigDecimal openingBalance = closingBalance.subtract(capitalized);
 
                 FdStatement statement = new FdStatement();
                 statement.setFdAccountNo(account.getFdAccountNo());
                 statement.setStatementDate(date);
                 statement.setOpeningBalance(openingBalance);
-                statement.setInterestCredited(interestCredited);
+                statement.setInterestAccrued(interestAccrued);
+                statement.setInterestCapitalized(capitalized);
+                statement.setInterestPaid(paid);
                 statement.setClosingBalance(closingBalance);
+                statement.setAccruedInterest(account.getAccruedInterest());
 
                 statementRepository.save(statement);
             } catch (Exception e) {
                 log.error("Failed to generate statement for account {}: {}", account.getFdAccountNo(), e.getMessage());
             }
         }
+    }
+
+    private BigDecimal amountFor(String accountNo, LocalDate date, String type) {
+        BigDecimal amount = transactionRepository.sumAmountByTypeAndDate(accountNo, date, type);
+        return amount == null ? BigDecimal.ZERO : amount;
     }
 }

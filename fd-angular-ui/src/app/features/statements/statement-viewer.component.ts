@@ -37,7 +37,7 @@ export class StatementViewerComponent implements OnInit {
       next: (data) => {
         this.statements = data;
         if (this.statements.length > 0) {
-          this.maxInterest = Math.max(...this.statements.map(s => s.interestCredited));
+          this.maxInterest = Math.max(...this.statements.map(s => s.interestAccrued));
         }
         this.loading = false;
       },

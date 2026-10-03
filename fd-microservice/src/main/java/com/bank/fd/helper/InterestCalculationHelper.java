@@ -36,7 +36,7 @@ public class InterestCalculationHelper {
         switch (frequency.toUpperCase()) {
             case "MONTHLY": return 12;
             case "QUARTERLY": return 4;
-            case "HALFYEARLY": return 2;
+            case "HALFYEARLY", "HALF_YEARLY": return 2;
             case "YEARLY": return 1;
             default: return 1;
         }

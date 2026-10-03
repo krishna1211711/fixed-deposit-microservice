@@ -22,13 +22,13 @@ The integration baseline is the public `BT-Team-1` repository supplied by the te
 
 The shared Swagger creates an FD with `{accountName, calcId}` at `POST /api/v1/accounts`. It expects the FD service to fetch the customer profile, calculation, and product from three other running services. Those repositories and response payloads are not present in the supplied team repository, so a live adapter cannot be verified yet.
 
-This module currently accepts the resolved values at `POST /api/fd/account/create`: `customerId`, `productCode`, `principalAmount`, `termMonths`, `branchCode`, `currency`, and optional customer categories. This is the stable standalone demonstration path.
+This module currently accepts the resolved values at `POST /api/fd/account/create`: `customerId`, `productCode`, `principalAmount`, `termMonths`, `branchCode`, `currency`, optional customer categories, a product-permitted `compoundingFrequency`, a product-permitted `payoutFrequency`, and a `maturityInstruction`. This is the stable standalone demonstration path.
 
 Before the final team merge, agree on these points:
 
 1. Exact calculation lookup path and response fields for `calcId`.
 2. Customer lookup path, JWT subject meaning, and canonical `customerId` field.
-3. Product payload fields for rate, currency, limits, penalty, and compounding.
+3. Product payload fields for rate, currency, limits, penalty, allowed compounding options, allowed payout options, and day-count convention.
 4. Whether the shared `/api/v1` paths stay canonical or the gateway rewrites them to this module's `/api/fd` paths.
 5. Event contract ownership. This repository publishes versioned lifecycle messages to Kafka topic `fd.lifecycle.v1`; other groups may add independent consumer groups without changing FD transaction logic.
 6. Savings or payment API for maturity and withdrawal payouts. Current ledger entries simulate the transfer and preserve an audit trail.

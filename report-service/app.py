@@ -45,6 +45,7 @@ def query(sql, params=()):
 SUMMARY_SQL = """
 SELECT p.product_code, p.product_name, COUNT(a.fd_account_no) AS account_count,
        COALESCE(SUM(a.principal_amount), 0) AS total_principal,
+       COALESCE(SUM(a.current_balance), 0) AS total_current_balance,
        COALESCE(SUM(a.accrued_interest), 0) AS total_accrued_interest
 FROM products p
 LEFT JOIN fd_accounts a ON a.product_code = p.product_code
@@ -68,7 +69,7 @@ def summary_csv():
         return jsonify(error="BANK_OFFICER or ADMIN role required"), 403
     rows = query(SUMMARY_SQL)
     output = io.StringIO()
-    fields = ["product_code", "product_name", "account_count", "total_principal", "total_accrued_interest"]
+    fields = ["product_code", "product_name", "account_count", "total_principal", "total_current_balance", "total_accrued_interest"]
     writer = csv.DictWriter(output, fieldnames=fields)
     writer.writeheader()
     writer.writerows(rows)
@@ -83,9 +84,10 @@ def summary_pdf():
     rows = query(SUMMARY_SQL)
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), title="Fixed Deposit Summary")
-    headers = ["Product code", "Product name", "Accounts", "Principal", "Accrued interest"]
+    headers = ["Product code", "Product name", "Accounts", "Original principal", "Current balance", "Unsettled accrued interest"]
     data = [headers] + [[r["product_code"], r["product_name"], r["account_count"],
-                         str(r["total_principal"]), str(r["total_accrued_interest"])] for r in rows]
+                         str(r["total_principal"]), str(r["total_current_balance"]),
+                         str(r["total_accrued_interest"])] for r in rows]
     table = Table(data, repeatRows=1)
     table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#173B57")),
@@ -112,18 +114,18 @@ def portfolio_chart():
     if not customer_id:
         return jsonify(error="customerId is required"), 400
     rows = query("""
-        SELECT fd_account_no, principal_amount, accrued_interest
+        SELECT fd_account_no, principal_amount, current_balance, accrued_interest
         FROM fd_accounts WHERE customer_id = %s ORDER BY created_at
     """, (customer_id,))
     if not rows:
         return jsonify(error="No fixed deposits found for customer"), 404
     labels = [r["fd_account_no"] for r in rows]
     principal = [float(r["principal_amount"]) for r in rows]
-    projected = [float(r["principal_amount"] + r["accrued_interest"]) for r in rows]
+    projected = [float(r["current_balance"] + r["accrued_interest"]) for r in rows]
     x = range(len(labels))
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.bar([i - 0.2 for i in x], principal, 0.4, label="Principal")
-    ax.bar([i + 0.2 for i in x], projected, 0.4, label="Current value")
+    ax.bar([i + 0.2 for i in x], projected, 0.4, label="Current balance + unsettled accrual")
     ax.set_xticks(list(x), labels, rotation=25, ha="right")
     ax.set_ylabel("Amount")
     ax.set_title(f"Fixed deposit portfolio: {customer_id}")

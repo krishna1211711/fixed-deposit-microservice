@@ -18,13 +18,16 @@ public class FdInterestTransaction {
     @Column(name = "accrual_date")
     private LocalDate accrualDate;
 
-    @Column(name = "interest_amount", precision = 18, scale = 4)
+    @Column(name = "interest_amount", precision = 18, scale = 6)
     private BigDecimal interestAmount;
 
     @Column(name = "capitalized_flag")
     private Boolean capitalizedFlag = false;
 
-    @Column(name = "cumulative_interest", precision = 18, scale = 4)
+    @Column(name = "settlement_type")
+    private String settlementType = "PENDING";
+
+    @Column(name = "cumulative_interest", precision = 18, scale = 6)
     private BigDecimal cumulativeInterest = BigDecimal.ZERO;
 
     public FdInterestTransaction() {}
@@ -48,6 +51,8 @@ public class FdInterestTransaction {
     public void setInterestAmount(BigDecimal interestAmount) { this.interestAmount = interestAmount; }
     public Boolean getCapitalizedFlag() { return capitalizedFlag; }
     public void setCapitalizedFlag(Boolean capitalizedFlag) { this.capitalizedFlag = capitalizedFlag; }
+    public String getSettlementType() { return settlementType; }
+    public void setSettlementType(String settlementType) { this.settlementType = settlementType; }
     public BigDecimal getCumulativeInterest() { return cumulativeInterest; }
     public void setCumulativeInterest(BigDecimal cumulativeInterest) { this.cumulativeInterest = cumulativeInterest; }
 }

@@ -27,6 +27,14 @@ public class EventPublisher {
         applicationEventPublisher.publishEvent(new InterestAccruedEvent(this, fdAccountNo, customerId, interestAmount, date));
     }
 
+    public void publishInterestCapitalized(String fdAccountNo, String customerId, BigDecimal amount, LocalDate date) {
+        applicationEventPublisher.publishEvent(new InterestCapitalizedEvent(this, fdAccountNo, customerId, amount, date));
+    }
+
+    public void publishInterestPaid(String fdAccountNo, String customerId, BigDecimal amount, LocalDate date) {
+        applicationEventPublisher.publishEvent(new InterestPaidEvent(this, fdAccountNo, customerId, amount, date));
+    }
+
     public void publishFdMatured(String fdAccountNo, String customerId, BigDecimal maturityAmount, LocalDate date) {
         applicationEventPublisher.publishEvent(new FDMaturedEvent(this, fdAccountNo, customerId, maturityAmount, date));
     }
@@ -34,5 +42,11 @@ public class EventPublisher {
     public void publishFdWithdrawn(String fdAccountNo, String customerId, BigDecimal withdrawalAmount, BigDecimal penaltyApplied) {
         boolean penaltyFlag = penaltyApplied != null && penaltyApplied.compareTo(BigDecimal.ZERO) > 0;
         applicationEventPublisher.publishEvent(new FDWithdrawnEvent(this, fdAccountNo, customerId, withdrawalAmount, penaltyFlag));
+    }
+
+    public void publishFdRenewed(String fdAccountNo, String renewalAccountNo, String customerId,
+                                 BigDecimal amount, LocalDate date) {
+        applicationEventPublisher.publishEvent(
+                new FDRenewedEvent(this, fdAccountNo, renewalAccountNo, customerId, amount, date));
     }
 }

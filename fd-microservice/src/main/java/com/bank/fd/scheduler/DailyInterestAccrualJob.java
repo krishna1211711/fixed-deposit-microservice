@@ -1,12 +1,8 @@
 package com.bank.fd.scheduler;
 
 import com.bank.fd.entity.FdAccount;
-import com.bank.fd.entity.FdInterestTransaction;
-import com.bank.fd.event.EventPublisher;
 import com.bank.fd.repository.FdAccountRepository;
-import com.bank.fd.repository.FdInterestTransactionRepository;
-import com.bank.fd.service.InterestEngineService;
-import com.bank.fd.service.FdTransactionService;
+import com.bank.fd.service.InterestLifecycleService;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,21 +15,12 @@ import java.util.List;
 public class DailyInterestAccrualJob {
 
     private final FdAccountRepository accountRepository;
-    private final FdInterestTransactionRepository interestTransactionRepository;
-    private final InterestEngineService interestEngineService;
-    private final FdTransactionService transactionService;
-    private final EventPublisher eventPublisher;
+    private final InterestLifecycleService interestLifecycleService;
 
     public DailyInterestAccrualJob(FdAccountRepository accountRepository,
-                                   FdInterestTransactionRepository interestTransactionRepository,
-                                   InterestEngineService interestEngineService,
-                                   FdTransactionService transactionService,
-                                   EventPublisher eventPublisher) {
+                                   InterestLifecycleService interestLifecycleService) {
         this.accountRepository = accountRepository;
-        this.interestTransactionRepository = interestTransactionRepository;
-        this.interestEngineService = interestEngineService;
-        this.transactionService = transactionService;
-        this.eventPublisher = eventPublisher;
+        this.interestLifecycleService = interestLifecycleService;
     }
 
     @Scheduled(cron = "0 0 1 * * ?")
@@ -41,28 +28,10 @@ public class DailyInterestAccrualJob {
         processInterestAccrual(LocalDate.now());
     }
 
-    @Transactional
     public void processInterestAccrual(LocalDate date) {
         List<FdAccount> activeAccounts = accountRepository.findAllActiveAccounts();
         for (FdAccount account : activeAccounts) {
-            if (interestTransactionRepository.findByFdAccountNoAndAccrualDate(account.getFdAccountNo(), date).isPresent()) {
-                continue;
-            }
-            BigDecimal dailyInterest = interestEngineService.calculateDailyAccrualForAccount(account, date);
-            BigDecimal newAccrued = account.getAccruedInterest().add(dailyInterest);
-            account.setAccruedInterest(newAccrued);
-            accountRepository.save(account);
-
-            FdInterestTransaction txn = new FdInterestTransaction();
-            txn.setFdAccountNo(account.getFdAccountNo());
-            txn.setAccrualDate(date);
-            txn.setInterestAmount(dailyInterest);
-            txn.setCapitalizedFlag(false);
-            txn.setCumulativeInterest(newAccrued);
-            interestTransactionRepository.save(txn);
-            transactionService.recordInterestCredit(account.getFdAccountNo(), dailyInterest, false);
-            eventPublisher.publishInterestAccrued(
-                    account.getFdAccountNo(), account.getCustomerId(), dailyInterest, date);
+            interestLifecycleService.processAccountThroughDate(account.getFdAccountNo(), date);
         }
     }
 }

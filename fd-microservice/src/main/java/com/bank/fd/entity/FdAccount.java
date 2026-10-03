@@ -27,6 +27,9 @@ public class FdAccount {
     @Column(name = "principal_amount", precision = 18, scale = 3)
     private BigDecimal principalAmount;
 
+    @Column(name = "current_balance", precision = 18, scale = 3, nullable = false)
+    private BigDecimal currentBalance;
+
     @Column(name = "interest_rate", precision = 5, scale = 2)
     private BigDecimal interestRate;
 
@@ -36,14 +39,44 @@ public class FdAccount {
     @Column(name = "compounding_frequency")
     private String compoundingFrequency;
 
+    @Column(name = "payout_frequency")
+    private String payoutFrequency;
+
     @Column(name = "status")
     private String status;
+
+    @Column(name = "start_date")
+    private LocalDate startDate;
 
     @Column(name = "maturity_date")
     private LocalDate maturityDate;
 
-    @Column(name = "accrued_interest", precision = 18, scale = 3)
+    @Column(name = "accrued_interest", precision = 18, scale = 6)
     private BigDecimal accruedInterest = BigDecimal.ZERO;
+
+    @Column(name = "last_accrual_date")
+    private LocalDate lastAccrualDate;
+
+    @Column(name = "last_capitalization_date")
+    private LocalDate lastCapitalizationDate;
+
+    @Column(name = "next_capitalization_date")
+    private LocalDate nextCapitalizationDate;
+
+    @Column(name = "last_payout_date")
+    private LocalDate lastPayoutDate;
+
+    @Column(name = "next_payout_date")
+    private LocalDate nextPayoutDate;
+
+    @Column(name = "maturity_instruction")
+    private String maturityInstruction;
+
+    @Column(name = "maturity_processed_at")
+    private LocalDateTime maturityProcessedAt;
+
+    @Column(name = "renewal_account_no")
+    private String renewalAccountNo;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -101,18 +134,40 @@ public class FdAccount {
     public void setCurrency(String currency) { this.currency = currency; }
     public BigDecimal getPrincipalAmount() { return principalAmount; }
     public void setPrincipalAmount(BigDecimal principalAmount) { this.principalAmount = principalAmount; }
+    public BigDecimal getCurrentBalance() { return currentBalance; }
+    public void setCurrentBalance(BigDecimal currentBalance) { this.currentBalance = currentBalance; }
     public BigDecimal getInterestRate() { return interestRate; }
     public void setInterestRate(BigDecimal interestRate) { this.interestRate = interestRate; }
     public Integer getTenureMonths() { return tenureMonths; }
     public void setTenureMonths(Integer tenureMonths) { this.tenureMonths = tenureMonths; }
     public String getCompoundingFrequency() { return compoundingFrequency; }
     public void setCompoundingFrequency(String compoundingFrequency) { this.compoundingFrequency = compoundingFrequency; }
+    public String getPayoutFrequency() { return payoutFrequency; }
+    public void setPayoutFrequency(String payoutFrequency) { this.payoutFrequency = payoutFrequency; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public LocalDate getStartDate() { return startDate; }
+    public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
     public LocalDate getMaturityDate() { return maturityDate; }
     public void setMaturityDate(LocalDate maturityDate) { this.maturityDate = maturityDate; }
     public BigDecimal getAccruedInterest() { return accruedInterest; }
     public void setAccruedInterest(BigDecimal accruedInterest) { this.accruedInterest = accruedInterest; }
+    public LocalDate getLastAccrualDate() { return lastAccrualDate; }
+    public void setLastAccrualDate(LocalDate lastAccrualDate) { this.lastAccrualDate = lastAccrualDate; }
+    public LocalDate getLastCapitalizationDate() { return lastCapitalizationDate; }
+    public void setLastCapitalizationDate(LocalDate lastCapitalizationDate) { this.lastCapitalizationDate = lastCapitalizationDate; }
+    public LocalDate getNextCapitalizationDate() { return nextCapitalizationDate; }
+    public void setNextCapitalizationDate(LocalDate nextCapitalizationDate) { this.nextCapitalizationDate = nextCapitalizationDate; }
+    public LocalDate getLastPayoutDate() { return lastPayoutDate; }
+    public void setLastPayoutDate(LocalDate lastPayoutDate) { this.lastPayoutDate = lastPayoutDate; }
+    public LocalDate getNextPayoutDate() { return nextPayoutDate; }
+    public void setNextPayoutDate(LocalDate nextPayoutDate) { this.nextPayoutDate = nextPayoutDate; }
+    public String getMaturityInstruction() { return maturityInstruction; }
+    public void setMaturityInstruction(String maturityInstruction) { this.maturityInstruction = maturityInstruction; }
+    public LocalDateTime getMaturityProcessedAt() { return maturityProcessedAt; }
+    public void setMaturityProcessedAt(LocalDateTime maturityProcessedAt) { this.maturityProcessedAt = maturityProcessedAt; }
+    public String getRenewalAccountNo() { return renewalAccountNo; }
+    public void setRenewalAccountNo(String renewalAccountNo) { this.renewalAccountNo = renewalAccountNo; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public String getCreatedBy() { return createdBy; }

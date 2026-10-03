@@ -28,7 +28,9 @@
           <tr>
             <th>{{ 'fdAccount.accountNo' | translate }}</th>
             <th>{{ 'fdAccount.productCode' | translate }}</th>
-            <th>{{ 'fdAccount.principalAmount' | translate }}</th>
+            <th>Original Principal</th>
+            <th>Current Balance</th>
+            <th>Accrued Interest</th>
             <th>Rate</th>
             <th>{{ 'fdAccount.termMonths' | translate }}</th>
             <th>{{ 'fdAccount.status' | translate }}</th>
@@ -40,6 +42,8 @@
             <td><strong>{{ acc.fdAccountNo }}</strong></td>
             <td>{{ acc.productCode }}</td>
             <td>{{ acc.principalAmount | currencyFormat:acc.currency }}</td>
+            <td>{{ acc.currentBalance | currencyFormat:acc.currency }}</td>
+            <td>{{ acc.accruedInterest | currencyFormat:acc.currency }}</td>
             <td>{{ acc.interestRate }}%</td>
             <td>{{ acc.tenureMonths }} mo</td>
             <td>

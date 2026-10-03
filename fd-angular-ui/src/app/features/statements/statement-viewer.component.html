@@ -7,8 +7,8 @@
   <div class="glass-card mb-4" *ngIf="statements.length > 0">
     <h3 class="mb-4">Interest Timeline</h3>
     <div class="chart-container">
-      <div class="bar-wrapper" *ngFor="let s of statements" [title]="s.statementDate + ': ' + (s.interestCredited | currencyFormat)">
-        <div class="bar" [style.height]="getBarHeight(s.interestCredited)"></div>
+      <div class="bar-wrapper" *ngFor="let s of statements" [title]="s.statementDate + ': ' + (s.interestAccrued | currencyFormat)">
+        <div class="bar" [style.height]="getBarHeight(s.interestAccrued)"></div>
         <div class="label">{{ s.statementDate | date:'MMM yy' }}</div>
       </div>
     </div>
@@ -21,16 +21,22 @@
           <tr>
             <th>Date</th>
             <th>Opening Balance</th>
-            <th>Interest Credited</th>
+            <th>Interest Accrued</th>
+            <th>Capitalized</th>
+            <th>Paid</th>
             <th>Closing Balance</th>
+            <th>Unsettled Accrued</th>
           </tr>
         </thead>
         <tbody *ngIf="!loading">
           <tr *ngFor="let s of statements">
             <td>{{ s.statementDate | date:'mediumDate' }}</td>
             <td>{{ s.openingBalance | currencyFormat }}</td>
-            <td class="text-success">+{{ s.interestCredited | currencyFormat }}</td>
+            <td>{{ s.interestAccrued | currencyFormat }}</td>
+            <td class="text-success">{{ s.interestCapitalized | currencyFormat }}</td>
+            <td>{{ s.interestPaid | currencyFormat }}</td>
             <td><strong>{{ s.closingBalance | currencyFormat }}</strong></td>
+            <td>{{ s.accruedInterest | currencyFormat }}</td>
           </tr>
         </tbody>
       </table>

@@ -51,6 +51,7 @@ erDiagram
         numeric min_rate
         numeric max_rate
         numeric min_deposit
+        numeric max_deposit
         numeric rate_cap_addon
         numeric pre_maturity_penalty_pct
         varchar compounding_frequency
@@ -105,7 +106,10 @@ erDiagram
         varchar fd_account_no FK
         date statement_date
         numeric opening_balance
-        numeric interest_credited
+        numeric interest_accrued
+        numeric interest_capitalized
+        numeric interest_paid
+        numeric accrued_interest
         numeric closing_balance
     }
 
@@ -173,9 +177,12 @@ Defines FD banking product offerings, rate ranges, and interest compounding rule
 | `max_term_months` | `INTEGER` | Not Null | Maximum allowed tenure in months |
 | `min_rate` | `NUMERIC(5,2)` | Not Null | Base interest rate percentage |
 | `max_rate` | `NUMERIC(5,2)` | Not Null | Maximum interest rate cap |
-| `min_deposit` | `NUMERIC(18,2)`| Not Null | Minimum principal amount required |
+| `min_deposit` | `NUMERIC(18,3)`| Not Null | Minimum principal amount required |
+| `max_deposit` | `NUMERIC(18,3)`| Nullable | Optional maximum principal amount |
 | `rate_cap_addon` | `NUMERIC(5,2)`| Default `2.00` | Maximum combined bonus percentage cap |
 | `pre_maturity_penalty_pct`| `NUMERIC(5,2)`| Default `1.00` | Early withdrawal penalty percentage |
+| `premature_closure_allowed` | `BOOLEAN` | Default `TRUE` | Whether early closure is permitted |
+| `day_count_convention` | `VARCHAR(20)` | Default `ACTUAL_365` | Daily accrual convention |
 | `compounding_frequency` | `VARCHAR(20)` | Default `'QUARTERLY'`| Compounding interval (`SIMPLE`, `MONTHLY`, `QUARTERLY`, `YEARLY`) |
 | `status` | `VARCHAR(20)` | Default `'ACTIVE'` | Product status (`ACTIVE`, `INACTIVE`) |
 | `created_at` | `TIMESTAMP` | Default `CURRENT_TIMESTAMP` | Product creation timestamp |
@@ -193,12 +200,22 @@ The primary entity representing booked Fixed Deposit accounts.
 | `product_code` | `VARCHAR(10)` | Foreign Key (`products.product_code`) | Linked product offering |
 | `currency` | `VARCHAR(3)` | Default `'INR'` | Account currency |
 | `principal_amount` | `NUMERIC(18,2)`| Not Null | Deposited principal amount |
+| `current_balance` | `NUMERIC(18,3)`| Not Null | Principal plus capitalized interest; excludes unsettled accrual |
 | `interest_rate` | `NUMERIC(5,2)`| Not Null | Final contracted interest rate |
 | `tenure_months` | `INTEGER` | Not Null | FD duration in months |
 | `compounding_frequency` | `VARCHAR(20)` | Not Null | Compounding schedule |
-| `status` | `VARCHAR(20)` | Default `'ACTIVE'` | State (`ACTIVE`, `CLOSED`, `PREMATURE_CLOSED`) |
+| `payout_frequency` | `VARCHAR(20)` | Not Null | Independent interest payout schedule |
+| `status` | `VARCHAR(20)` | Default `'ACTIVE'` | State (`ACTIVE`, `CLOSED`, `PREMATURE_CLOSED`, `RENEWED`) |
+| `start_date` | `DATE` | Not Null | Contractual interest start date |
 | `maturity_date` | `DATE` | Not Null | Scheduled maturity completion date |
-| `accrued_interest` | `NUMERIC(18,2)`| Default `0.00` | Current accumulated accrued interest |
+| `accrued_interest` | `NUMERIC(18,6)`| Default `0.00` | Current unsettled interest; excluded from current balance |
+| `last_accrual_date` | `DATE` | Nullable | Idempotency cursor for daily accrual |
+| `last_capitalization_date` | `DATE` | Nullable | Last completed capitalization |
+| `next_capitalization_date` | `DATE` | Nullable | Next calendar-based capitalization date |
+| `last_payout_date` / `next_payout_date` | `DATE` | Nullable | Independent payout schedule cursors |
+| `maturity_instruction` | `VARCHAR(40)` | Not Null | `PAYOUT`, `RENEW_PRINCIPAL`, or `RENEW_PRINCIPAL_AND_INTEREST` |
+| `maturity_processed_at` | `TIMESTAMP` | Nullable | Idempotency marker for maturity processing |
+| `renewal_account_no` | `VARCHAR(20)` | Nullable | New FD created by a renewal instruction |
 | `created_at` | `TIMESTAMP` | Default `CURRENT_TIMESTAMP` | Account opening timestamp |
 | `created_by` | `VARCHAR(50)` | Not Null | Bank Officer or System creator |
 | `modified_at` | `TIMESTAMP` | Updated automatically | Last status/balance modification |
@@ -213,13 +230,15 @@ An **insert-only (append-only)** ledger recording all financial movements with d
 |---|---|---|---|
 | `txn_id` | `BIGINT` | Primary Key, Auto Increment | Unique transaction ID |
 | `fd_account_no` | `VARCHAR(20)` | Foreign Key (`fd_accounts.fd_account_no`) | Linked FD account number |
-| `txn_type` | `VARCHAR(20)` | Not Null | Transaction type (`DEPOSIT`, `INTEREST_CREDIT`, `WITHDRAWAL`, `PENALTY`, `MATURITY_PAYOUT`) |
+| `txn_type` | `VARCHAR(30)` | Not Null | Precise event type such as `DEPOSIT`, `INTEREST_ACCRUAL`, `INTEREST_CAPITALIZATION`, `INTEREST_PAYOUT`, `FD_MATURITY`, `FD_RENEWAL`, or `PREMATURE_CLOSURE` |
 | `amount` | `NUMERIC(18,2)`| Not Null | Transaction monetary amount |
 | `currency` | `VARCHAR(3)` | Default `'INR'` | Transaction currency |
 | `debit_gl_account` | `VARCHAR(50)` | Not Null | Debit General Ledger account |
 | `credit_gl_account` | `VARCHAR(50)` | Not Null | Credit General Ledger account |
 | `status` | `VARCHAR(20)` | Default `'COMPLETED'`| State (`COMPLETED`, `FAILED`) |
 | `txn_timestamp` | `TIMESTAMP` | Default `CURRENT_TIMESTAMP` | Execution timestamp |
+| `business_date` | `DATE` | Not Null | Effective financial date |
+| `reference_id` | `VARCHAR(100)` | Unique, Not Null | Stable idempotency reference |
 | `remarks` | `VARCHAR(500)`| Nullable | Audit remarks |
 | `uuid` | `VARCHAR(255)` | Unique, Not Null | Globally unique transaction UUID |
 
@@ -233,9 +252,10 @@ Records daily interest accrual entries computed by the automated batch job.
 | `id` | `BIGINT` | Primary Key, Auto Increment | Accrual record ID |
 | `fd_account_no` | `VARCHAR(20)` | Foreign Key (`fd_accounts.fd_account_no`) | Linked FD account |
 | `accrual_date` | `DATE` | Not Null | Date of daily accrual |
-| `interest_amount` | `NUMERIC(18,4)`| Not Null | Daily interest accrued amount |
-| `cumulative_interest`| `NUMERIC(18,4)`| Not Null | Cumulative lifetime interest accrued |
+| `interest_amount` | `NUMERIC(18,6)`| Not Null | Daily interest accrued amount |
+| `cumulative_interest`| `NUMERIC(18,6)`| Not Null | Accrued interest after this daily event |
 | `capitalized_flag` | `BOOLEAN` | Default `FALSE` | Indicates if interest was added to principal |
+| `settlement_type` | `VARCHAR(20)` | Default `PENDING` | `PENDING`, `CAPITALIZED`, `PAID`, or closure settlement |
 
 ---
 
@@ -248,8 +268,11 @@ Stores monthly summary statements generated on the 1st of each month.
 | `fd_account_no` | `VARCHAR(20)` | Foreign Key (`fd_accounts.fd_account_no`) | Linked FD account |
 | `statement_date` | `DATE` | Not Null | Statement period end date |
 | `opening_balance` | `NUMERIC(18,2)`| Not Null | Month opening principal balance |
-| `interest_credited` | `NUMERIC(18,2)`| Not Null | Total interest accrued during the month |
-| `closing_balance` | `NUMERIC(18,2)`| Not Null | Month closing balance ($\text{Opening} + \text{Interest}$) |
+| `interest_accrued` | `NUMERIC(18,6)`| Not Null | Interest calculated during the statement day/period |
+| `interest_capitalized` | `NUMERIC(18,6)`| Not Null | Interest moved into current balance |
+| `interest_paid` | `NUMERIC(18,6)`| Not Null | Interest settled externally |
+| `accrued_interest` | `NUMERIC(18,6)`| Not Null | Unsettled accrual at statement close |
+| `closing_balance` | `NUMERIC(18,3)`| Not Null | Closing current balance, excluding unsettled accrual |
 
 ---
 
@@ -270,7 +293,7 @@ Stores audit logs for all outbound customer email and event notifications.
 |---|---|---|---|
 | `id` | `BIGINT` | Primary Key, Auto Increment | Log entry ID |
 | `customer_id` | `VARCHAR(20)` | Not Null | Target customer ID |
-| `event_type` | `VARCHAR(50)` | Not Null | Life-cycle trigger event (`FD_OPENED`, `FD_MATURED`, `FD_WITHDRAWN`) |
+| `event_type` | `VARCHAR(50)` | Not Null | Precise lifecycle event, including accrual, capitalization, payout, maturity, renewal, and premature closure |
 | `channel` | `VARCHAR(20)` | Default `'EMAIL'` | Dispatch channel |
 | `message_body` | `TEXT` | Not Null | Complete notification text |
 | `status` | `VARCHAR(20)` | Default `'SENT'` | Delivery status (`SENT`, `FAILED`) |

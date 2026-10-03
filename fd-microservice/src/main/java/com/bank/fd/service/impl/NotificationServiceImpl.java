@@ -77,6 +77,20 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
+    public void sendInterestCapitalizedNotification(String customerId, String fdAccountNo, BigDecimal interest) {
+        logAndSendNotification(customerId, "INTEREST_CAPITALIZED",
+                "FD Interest Capitalized: " + fdAccountNo,
+                "Dear Customer, accrued interest of INR " + interest + " was capitalized into FD account " + fdAccountNo + ".");
+    }
+
+    @Override
+    public void sendInterestPaidNotification(String customerId, String fdAccountNo, BigDecimal interest) {
+        logAndSendNotification(customerId, "INTEREST_PAID",
+                "FD Interest Paid: " + fdAccountNo,
+                "Dear Customer, interest of INR " + interest + " was paid from FD account " + fdAccountNo + ".");
+    }
+
+    @Override
     public void sendMaturityNotification(String customerId, String fdAccountNo, BigDecimal maturityAmount) {
         logAndSendNotification(customerId, "FD_MATURED",
                 "Fixed Deposit Matured: " + fdAccountNo,
@@ -85,8 +99,15 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public void sendWithdrawalNotification(String customerId, String fdAccountNo, BigDecimal withdrawalAmount) {
-        logAndSendNotification(customerId, "FD_WITHDRAWN",
+        logAndSendNotification(customerId, "FD_PREMATURELY_CLOSED",
                 "Fixed Deposit Account Closed: " + fdAccountNo,
                 "Dear Customer, a withdrawal and permanent closure of INR " + withdrawalAmount + " has been processed for your FD account " + fdAccountNo + ".");
+    }
+
+    @Override
+    public void sendRenewalNotification(String customerId, String fdAccountNo, String renewalAccountNo, BigDecimal amount) {
+        logAndSendNotification(customerId, "FD_RENEWED",
+                "Fixed Deposit Renewed: " + fdAccountNo,
+                "Dear Customer, FD " + fdAccountNo + " was renewed as " + renewalAccountNo + " for INR " + amount + ".");
     }
 }

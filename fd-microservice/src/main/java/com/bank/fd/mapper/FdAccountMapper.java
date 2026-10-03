@@ -25,12 +25,24 @@ public class FdAccountMapper {
         res.setProductCode(account.getProductCode());
         res.setCurrency(account.getCurrency());
         res.setPrincipalAmount(account.getPrincipalAmount());
+        res.setCurrentBalance(account.getCurrentBalance() != null
+                ? account.getCurrentBalance() : account.getPrincipalAmount());
         res.setInterestRate(account.getInterestRate());
         res.setTenureMonths(account.getTenureMonths());
         res.setCompoundingFrequency(account.getCompoundingFrequency());
+        res.setPayoutFrequency(account.getPayoutFrequency());
         res.setStatus(account.getStatus());
         res.setMaturityDate(account.getMaturityDate());
+        res.setStartDate(account.getStartDate());
         res.setAccruedInterest(account.getAccruedInterest());
+        res.setLastAccrualDate(account.getLastAccrualDate());
+        res.setLastCapitalizationDate(account.getLastCapitalizationDate());
+        res.setNextCapitalizationDate(account.getNextCapitalizationDate());
+        res.setLastPayoutDate(account.getLastPayoutDate());
+        res.setNextPayoutDate(account.getNextPayoutDate());
+        res.setMaturityInstruction(account.getMaturityInstruction());
+        res.setMaturityProcessedAt(account.getMaturityProcessedAt());
+        res.setRenewalAccountNo(account.getRenewalAccountNo());
         res.setCreatedAt(account.getCreatedAt());
         res.setCreatedBy(account.getCreatedBy());
         return res;
@@ -41,7 +53,9 @@ public class FdAccountMapper {
         FdPortfolioReport report = new FdPortfolioReport();
         report.setFdAccountNo(account.getFdAccountNo());
         report.setProductCode(account.getProductCode());
-        report.setPrincipalAmount(account.getPrincipalAmount());
+        BigDecimal currentBalance = account.getCurrentBalance() != null
+                ? account.getCurrentBalance() : account.getPrincipalAmount();
+        report.setPrincipalAmount(currentBalance);
         report.setInterestRate(account.getInterestRate());
         report.setTenureMonths(account.getTenureMonths());
         report.setStatus(account.getStatus());
@@ -50,12 +64,12 @@ public class FdAccountMapper {
 
         int compoundings = interestCalculationHelper.getCompoundingsPerYear(account.getCompoundingFrequency());
         BigDecimal projectedInterest = interestCalculationHelper.calculateCompoundInterest(
-                account.getPrincipalAmount(),
+                currentBalance,
                 account.getInterestRate(),
                 account.getTenureMonths(),
                 compoundings
         );
-        report.setProjectedMaturityAmount(account.getPrincipalAmount().add(projectedInterest));
+        report.setProjectedMaturityAmount(currentBalance.add(projectedInterest).add(account.getAccruedInterest()));
         return report;
     }
 }

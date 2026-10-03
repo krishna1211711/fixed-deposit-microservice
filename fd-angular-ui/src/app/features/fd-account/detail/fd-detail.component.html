@@ -26,8 +26,18 @@
       <div class="grid grid-cols-2 gap-4">
         
         <div class="detail-group">
-          <label class="text-muted">Principal Amount</label>
+          <label class="text-muted">Original Principal</label>
           <div class="value large text-accent">{{ account.principalAmount | currencyFormat:account.currency }}</div>
+        </div>
+
+        <div class="detail-group">
+          <label class="text-muted">Current Balance</label>
+          <div class="value large text-accent">{{ account.currentBalance | currencyFormat:account.currency }}</div>
+        </div>
+
+        <div class="detail-group">
+          <label class="text-muted">Accrued (not capitalized)</label>
+          <div class="value">{{ account.accruedInterest | currencyFormat:account.currency }}</div>
         </div>
         
         <div class="detail-group">
@@ -54,6 +64,11 @@
           <label class="text-muted">Maturity Date</label>
           <div class="value">{{ account.maturityDate | date:'mediumDate' }}</div>
         </div>
+
+        <div class="detail-group"><label class="text-muted">Capitalization</label><div class="value">{{ account.compoundingFrequency }}</div></div>
+        <div class="detail-group"><label class="text-muted">Payout Frequency</label><div class="value">{{ account.payoutFrequency }}</div></div>
+        <div class="detail-group"><label class="text-muted">Maturity Instruction</label><div class="value">{{ account.maturityInstruction }}</div></div>
+        <div class="detail-group"><label class="text-muted">Next Capitalization</label><div class="value">{{ account.nextCapitalizationDate | date:'mediumDate' }}</div></div>
         
         <div class="detail-group">
           <label class="text-muted">Created At</label>
@@ -81,11 +96,11 @@
               <td>{{ tx.txnTimestamp | date:'medium' }}</td>
               <td>
                 <span class="badge" [ngClass]="{
-                  'badge-active': tx.txnType === 'DEPOSIT' || tx.txnType === 'INTEREST_CREDIT',
-                  'badge-warning': tx.txnType === 'WITHDRAWAL' || tx.txnType === 'PENALTY'
+                  'badge-active': tx.txnType === 'DEPOSIT' || tx.txnType === 'INTEREST_CAPITALIZATION',
+                  'badge-warning': tx.txnType === 'PREMATURE_CLOSURE' || tx.txnType === 'PENALTY'
                 }">{{ tx.txnType }}</span>
               </td>
-              <td [ngClass]="tx.txnType === 'DEPOSIT' || tx.txnType === 'INTEREST_CREDIT' ? 'text-success' : 'text-danger'">
+              <td [ngClass]="tx.txnType === 'DEPOSIT' || tx.txnType === 'INTEREST_CAPITALIZATION' ? 'text-success' : ''">
                 {{ tx.amount | currencyFormat:account.currency }}
               </td>
               <td>{{ tx.remarks }}</td>

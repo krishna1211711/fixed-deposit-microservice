@@ -8,6 +8,7 @@ import com.bank.fd.event.EventPublisher;
 import com.bank.fd.exception.InvalidOperationException;
 import com.bank.fd.repository.FdAccountRepository;
 import com.bank.fd.repository.FdStatementRepository;
+import com.bank.fd.repository.FdInterestTransactionRepository;
 import com.bank.fd.service.impl.WithdrawalServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,13 +35,15 @@ class WithdrawalServiceTest {
     @Mock
     private ProductService productService;
     @Mock
-    private InterestEngineService interestEngineService;
+    private InterestLifecycleService lifecycleService;
     @Mock
     private FdTransactionService transactionService;
     @Mock
     private EventPublisher eventPublisher;
     @Mock
     private FdStatementRepository statementRepository;
+    @Mock
+    private FdInterestTransactionRepository interestRepository;
 
     @InjectMocks
     private WithdrawalServiceImpl withdrawalService;
@@ -56,8 +59,11 @@ class WithdrawalServiceTest {
         account.setProductCode("FD_STD");
         account.setStatus("ACTIVE");
         account.setPrincipalAmount(new BigDecimal("100000.00"));
+        account.setCurrentBalance(new BigDecimal("103000.00"));
+        account.setAccruedInterest(new BigDecimal("500.00"));
         account.setInterestRate(new BigDecimal("7.00"));
         account.setCreatedAt(LocalDateTime.now().minusMonths(6));
+        account.setStartDate(LocalDate.now().minusMonths(6));
         account.setMaturityDate(LocalDate.now().plusMonths(6));
 
         product = new Product();
@@ -72,11 +78,8 @@ class WithdrawalServiceTest {
         request.setWithdrawalDate(LocalDate.now());
 
         when(accountRepository.findById("FD001000001")).thenReturn(Optional.of(account));
+        when(accountRepository.findByIdForUpdate("FD001000001")).thenReturn(Optional.of(account));
         when(productService.getProduct("FD_STD")).thenReturn(product);
-
-        // Suppose 3,500.00 interest was accrued
-        when(interestEngineService.calculateAccruedInterestForPeriod(eq(account), any(), any()))
-                .thenReturn(new BigDecimal("3500.00"));
 
         WithdrawalResponse response = withdrawalService.processWithdrawal(request, "OFFICER1");
 
@@ -93,8 +96,10 @@ class WithdrawalServiceTest {
         verify(accountRepository).save(account);
 
         // Verify withdrawal and separate penalty transaction are recorded
-        verify(transactionService).recordWithdrawal("FD001000001", new BigDecimal("103465.00"), new BigDecimal("35.00"));
-        verify(transactionService).recordPenaltyDeduction("FD001000001", new BigDecimal("35.00"));
+        verify(transactionService).recordWithdrawal("FD001000001", new BigDecimal("103465.00"),
+                new BigDecimal("35.00"), request.getWithdrawalDate());
+        verify(transactionService).recordPenaltyDeduction("FD001000001", new BigDecimal("35.00"),
+                request.getWithdrawalDate());
         verify(eventPublisher).publishFdWithdrawn("FD001000001", "CUST001", new BigDecimal("103465.00"), new BigDecimal("35.00"));
     }
 

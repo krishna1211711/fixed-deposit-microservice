@@ -107,6 +107,15 @@ class ProductServiceTest {
     }
 
     @Test
+    void testValidateProductDepositAboveMaximum() {
+        sampleProduct.setMaxDeposit(new BigDecimal("100000.00"));
+        when(productRepository.findByProductCode("FD_STD")).thenReturn(Optional.of(sampleProduct));
+
+        assertThrows(InvalidOperationException.class, () ->
+                productService.validateProductForFd("FD_STD", 12, new BigDecimal("100000.01")));
+    }
+
+    @Test
     void testValidateProductInactive() {
         sampleProduct.setStatus("INACTIVE");
         when(productRepository.findByProductCode("FD_STD")).thenReturn(Optional.of(sampleProduct));

@@ -3,15 +3,17 @@ package com.bank.fd.service.impl;
 import com.bank.fd.dto.request.WithdrawalRequest;
 import com.bank.fd.dto.response.WithdrawalResponse;
 import com.bank.fd.entity.FdAccount;
+import com.bank.fd.entity.FdInterestTransaction;
 import com.bank.fd.entity.FdStatement;
 import com.bank.fd.entity.Product;
 import com.bank.fd.event.EventPublisher;
 import com.bank.fd.exception.FdNotFoundException;
 import com.bank.fd.exception.InvalidOperationException;
 import com.bank.fd.repository.FdAccountRepository;
+import com.bank.fd.repository.FdInterestTransactionRepository;
 import com.bank.fd.repository.FdStatementRepository;
 import com.bank.fd.service.FdTransactionService;
-import com.bank.fd.service.InterestEngineService;
+import com.bank.fd.service.InterestLifecycleService;
 import com.bank.fd.service.ProductService;
 import com.bank.fd.service.WithdrawalService;
 import org.springframework.stereotype.Service;
@@ -20,106 +22,112 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @Transactional
 public class WithdrawalServiceImpl implements WithdrawalService {
-
     private final FdAccountRepository accountRepository;
     private final ProductService productService;
-    private final InterestEngineService interestEngineService;
+    private final InterestLifecycleService lifecycleService;
     private final FdTransactionService transactionService;
     private final EventPublisher eventPublisher;
     private final FdStatementRepository statementRepository;
+    private final FdInterestTransactionRepository interestRepository;
 
     public WithdrawalServiceImpl(FdAccountRepository accountRepository,
                                  ProductService productService,
-                                 InterestEngineService interestEngineService,
+                                 InterestLifecycleService lifecycleService,
                                  FdTransactionService transactionService,
                                  EventPublisher eventPublisher,
-                                 FdStatementRepository statementRepository) {
+                                 FdStatementRepository statementRepository,
+                                 FdInterestTransactionRepository interestRepository) {
         this.accountRepository = accountRepository;
         this.productService = productService;
-        this.interestEngineService = interestEngineService;
+        this.lifecycleService = lifecycleService;
         this.transactionService = transactionService;
         this.eventPublisher = eventPublisher;
         this.statementRepository = statementRepository;
+        this.interestRepository = interestRepository;
     }
 
     @Override
     public WithdrawalResponse processWithdrawal(WithdrawalRequest request, String requestedBy) {
-        FdAccount account = accountRepository.findById(request.getFdAccountNo())
+        FdAccount initial = accountRepository.findById(request.getFdAccountNo())
                 .orElseThrow(() -> new FdNotFoundException(request.getFdAccountNo()));
-
-        if (!"ACTIVE".equalsIgnoreCase(account.getStatus())) {
+        if (!"ACTIVE".equalsIgnoreCase(initial.getStatus())) {
             throw new InvalidOperationException("Account is not ACTIVE: " + request.getFdAccountNo());
         }
 
-        LocalDate withdrawalDate = request.getWithdrawalDate() != null
-                ? request.getWithdrawalDate()
-                : LocalDate.now();
-
-        LocalDate openingDate = account.getCreatedAt().toLocalDate();
-        if (withdrawalDate.isBefore(openingDate)) {
-            throw new InvalidOperationException("Withdrawal date cannot be before FD opening date: " + openingDate);
+        LocalDate withdrawalDate = request.getWithdrawalDate() != null ? request.getWithdrawalDate() : LocalDate.now();
+        if (withdrawalDate.isBefore(initial.getStartDate())) {
+            throw new InvalidOperationException("Withdrawal date cannot be before FD start date: " + initial.getStartDate());
         }
-        if (account.getMaturityDate() != null && !withdrawalDate.isBefore(account.getMaturityDate())) {
-            throw new InvalidOperationException(
-                    "Premature withdrawal date must be before maturity date: " + account.getMaturityDate());
+        if (initial.getMaturityDate() != null && !withdrawalDate.isBefore(initial.getMaturityDate())) {
+            throw new InvalidOperationException("Premature withdrawal date must be before maturity date: "
+                    + initial.getMaturityDate());
         }
 
-        // Calculate interest accrued from account opening up to the withdrawal date
-        BigDecimal accruedInterest = interestEngineService.calculateAccruedInterestForPeriod(
-                account, openingDate, withdrawalDate);
+        Product product = productService.getProduct(initial.getProductCode());
+        if (Boolean.FALSE.equals(product.getPrematureClosureAllowed())) {
+            throw new InvalidOperationException("Premature closure is not allowed for product " + product.getProductCode());
+        }
 
-        Product product = productService.getProduct(account.getProductCode());
+        lifecycleService.processAccountThroughDate(initial.getFdAccountNo(), withdrawalDate);
+        FdAccount account = accountRepository.findByIdForUpdate(initial.getFdAccountNo())
+                .orElseThrow(() -> new FdNotFoundException(initial.getFdAccountNo()));
+        BigDecimal balanceBeforeClosure = account.getCurrentBalance();
+        BigDecimal pendingAccrued = account.getAccruedInterest();
+        BigDecimal grossValue = balanceBeforeClosure.add(pendingAccrued);
+        BigDecimal grossInterest = grossValue.subtract(account.getPrincipalAmount()).max(BigDecimal.ZERO);
+
         BigDecimal penaltyPct = product.getPreMaturityPenaltyPct() != null
-                ? product.getPreMaturityPenaltyPct()
-                : new BigDecimal("1.00");
-
-        // Penalty is a percentage of the accrued interest
-        BigDecimal penaltyAmount = accruedInterest
-                .multiply(penaltyPct)
+                ? product.getPreMaturityPenaltyPct() : BigDecimal.ZERO;
+        BigDecimal penaltyAmount = grossInterest.multiply(penaltyPct)
                 .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
-        BigDecimal netInterest = accruedInterest.subtract(penaltyAmount);
+        BigDecimal netInterest = grossInterest.subtract(penaltyAmount);
         BigDecimal netPayout = account.getPrincipalAmount().add(netInterest);
 
-        // Update account status
+        List<FdInterestTransaction> pendingRecords = interestRepository
+                .findByFdAccountNoAndSettlementTypeAndAccrualDateLessThanEqual(
+                        account.getFdAccountNo(), "PENDING", withdrawalDate);
+        pendingRecords.forEach(record -> record.setSettlementType("PREMATURE_CLOSURE"));
+        interestRepository.saveAll(pendingRecords);
+
         account.setStatus("PREMATURE_CLOSED");
+        account.setCurrentBalance(BigDecimal.ZERO.setScale(3, RoundingMode.HALF_UP));
+        account.setAccruedInterest(BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP));
         accountRepository.save(account);
 
-        // Record withdrawal net payout transaction
-        transactionService.recordWithdrawal(account.getFdAccountNo(), netPayout, penaltyAmount);
-
-        // Record penalty as a separate GL transaction for audit trail
-        if (penaltyAmount.compareTo(BigDecimal.ZERO) > 0) {
-            transactionService.recordPenaltyDeduction(account.getFdAccountNo(), penaltyAmount);
+        transactionService.recordWithdrawal(account.getFdAccountNo(), netPayout, penaltyAmount, withdrawalDate);
+        if (penaltyAmount.signum() > 0) {
+            transactionService.recordPenaltyDeduction(account.getFdAccountNo(), penaltyAmount, withdrawalDate);
         }
 
-        FdStatement finalStatement = statementRepository
+        FdStatement statement = statementRepository
                 .findByFdAccountNoAndStatementDate(account.getFdAccountNo(), withdrawalDate)
                 .orElseGet(FdStatement::new);
-        finalStatement.setFdAccountNo(account.getFdAccountNo());
-        finalStatement.setStatementDate(withdrawalDate);
-        finalStatement.setOpeningBalance(account.getPrincipalAmount());
-        finalStatement.setInterestCredited(netInterest);
-        finalStatement.setClosingBalance(netPayout);
-        statementRepository.save(finalStatement);
+        statement.setFdAccountNo(account.getFdAccountNo());
+        statement.setStatementDate(withdrawalDate);
+        statement.setOpeningBalance(balanceBeforeClosure);
+        statement.setInterestAccrued(pendingAccrued);
+        statement.setInterestCapitalized(BigDecimal.ZERO);
+        statement.setInterestPaid(netInterest);
+        statement.setClosingBalance(BigDecimal.ZERO);
+        statement.setAccruedInterest(BigDecimal.ZERO);
+        statementRepository.save(statement);
 
-        eventPublisher.publishFdWithdrawn(account.getFdAccountNo(), account.getCustomerId(),
-                netPayout, penaltyAmount);
+        eventPublisher.publishFdWithdrawn(account.getFdAccountNo(), account.getCustomerId(), netPayout, penaltyAmount);
 
         WithdrawalResponse response = new WithdrawalResponse();
         response.setStatus("PREMATURE_CLOSED");
-        response.setMessage("FD Account prematurely closed with penalty applied");
+        response.setMessage("FD Account prematurely closed under product penalty rules");
         response.setFdAccountNo(account.getFdAccountNo());
         response.setWithdrawalAmount(netPayout);
         response.setPrincipalReturned(account.getPrincipalAmount());
         response.setInterestEarned(netInterest);
         response.setPenaltyApplied(penaltyAmount);
-        // Return the original contracted interest rate — penalty is shown separately
         response.setEffectiveRate(account.getInterestRate());
-
         return response;
     }
 }

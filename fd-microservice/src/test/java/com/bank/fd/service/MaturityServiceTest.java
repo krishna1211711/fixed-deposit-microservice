@@ -6,6 +6,8 @@ import com.bank.fd.event.EventPublisher;
 import com.bank.fd.exception.InvalidOperationException;
 import com.bank.fd.repository.FdAccountRepository;
 import com.bank.fd.repository.FdStatementRepository;
+import com.bank.fd.repository.FdTransactionRepository;
+import com.bank.fd.helper.AccountNumberGenerator;
 import com.bank.fd.service.impl.MaturityServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,11 +34,17 @@ class MaturityServiceTest {
     @Mock
     private InterestEngineService interestEngineService;
     @Mock
+    private InterestLifecycleService lifecycleService;
+    @Mock
     private FdTransactionService transactionService;
     @Mock
     private EventPublisher eventPublisher;
     @Mock
     private FdStatementRepository statementRepository;
+    @Mock
+    private FdTransactionRepository transactionRepository;
+    @Mock
+    private AccountNumberGenerator accountNumberGenerator;
 
     @InjectMocks
     private MaturityServiceImpl maturityService;
@@ -50,6 +58,9 @@ class MaturityServiceTest {
         account.setCustomerId("CUST001");
         account.setStatus("ACTIVE");
         account.setPrincipalAmount(new BigDecimal("100000.00"));
+        account.setCurrentBalance(new BigDecimal("107185.90"));
+        account.setAccruedInterest(BigDecimal.ZERO);
+        account.setMaturityInstruction("PAYOUT");
         account.setMaturityDate(LocalDate.now());
     }
 
@@ -57,13 +68,17 @@ class MaturityServiceTest {
     void testProcessMaturedAccountsBatch() {
         LocalDate today = LocalDate.now();
         when(accountRepository.findMaturedAccounts(today)).thenReturn(List.of(account));
+        when(accountRepository.findByIdForUpdate("FD001000001")).thenReturn(Optional.of(account));
         when(interestEngineService.calculateMaturityAmount(account)).thenReturn(new BigDecimal("107185.90"));
 
         int count = maturityService.processMaturedAccounts(today);
+        int duplicateCount = maturityService.processMaturedAccounts(today);
 
         assertEquals(1, count);
+        assertEquals(0, duplicateCount);
         assertEquals("CLOSED", account.getStatus());
-        verify(transactionService).recordMaturityPayout("FD001000001", new BigDecimal("107185.90"));
+        verify(transactionService, times(1)).recordMaturityPayout(
+                "FD001000001", new BigDecimal("107185.90"), today, "PAYOUT");
         verify(eventPublisher).publishFdMatured("FD001000001", "CUST001", new BigDecimal("107185.90"), today);
     }
 
@@ -71,13 +86,15 @@ class MaturityServiceTest {
     void testCloseMaturedAccountManualSuccess() {
         account.setMaturityDate(LocalDate.now().minusDays(1)); // Already reached maturity
         when(accountRepository.findById("FD001000001")).thenReturn(Optional.of(account));
+        when(accountRepository.findByIdForUpdate("FD001000001")).thenReturn(Optional.of(account));
         when(interestEngineService.calculateMaturityAmount(account)).thenReturn(new BigDecimal("107185.90"));
 
         ApiResponse response = maturityService.closeMaturedAccount("FD001000001");
 
         assertTrue(response.isSuccess());
         assertEquals("CLOSED", account.getStatus());
-        verify(transactionService).recordMaturityPayout("FD001000001", new BigDecimal("107185.90"));
+        verify(transactionService).recordMaturityPayout("FD001000001", new BigDecimal("107185.90"),
+                account.getMaturityDate(), "PAYOUT");
     }
 
     @Test

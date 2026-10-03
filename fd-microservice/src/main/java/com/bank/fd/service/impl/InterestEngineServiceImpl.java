@@ -22,7 +22,9 @@ public class InterestEngineServiceImpl implements InterestEngineService {
 
     @Override
     public BigDecimal calculateDailyAccrualForAccount(FdAccount account, LocalDate date) {
-        return interestCalculationHelper.calculateDailyAccrual(account.getPrincipalAmount(), account.getInterestRate());
+        BigDecimal balance = account.getCurrentBalance() != null
+                ? account.getCurrentBalance() : account.getPrincipalAmount();
+        return interestCalculationHelper.calculateDailyAccrual(balance, account.getInterestRate());
     }
 
     @Override
@@ -37,13 +39,9 @@ public class InterestEngineServiceImpl implements InterestEngineService {
 
     @Override
     public BigDecimal calculateMaturityAmount(FdAccount account) {
-        int compoundings = interestCalculationHelper.getCompoundingsPerYear(account.getCompoundingFrequency());
-        BigDecimal interest = interestCalculationHelper.calculateCompoundInterest(
-                account.getPrincipalAmount(),
-                account.getInterestRate(),
-                account.getTenureMonths(),
-                compoundings
-        );
-        return CurrencyRules.round(account.getPrincipalAmount().add(interest), account.getCurrency());
+        BigDecimal balance = account.getCurrentBalance() != null
+                ? account.getCurrentBalance() : account.getPrincipalAmount();
+        BigDecimal accrued = account.getAccruedInterest() != null ? account.getAccruedInterest() : BigDecimal.ZERO;
+        return CurrencyRules.round(balance.add(accrued), account.getCurrency());
     }
 }

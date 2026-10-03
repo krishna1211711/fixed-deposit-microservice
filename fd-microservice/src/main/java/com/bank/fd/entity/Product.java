@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "products")
@@ -40,6 +42,9 @@ public class Product {
     @Column(name = "min_deposit", precision = 18, scale = 3)
     private BigDecimal minDeposit;
 
+    @Column(name = "max_deposit", precision = 18, scale = 3)
+    private BigDecimal maxDeposit;
+
     @Column(name = "rate_cap_addon", precision = 5, scale = 2)
     private BigDecimal rateCapAddon;
 
@@ -48,6 +53,22 @@ public class Product {
 
     @Column(name = "compounding_frequency")
     private String compoundingFrequency;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "product_compounding_options", joinColumns = @JoinColumn(name = "product_code"))
+    @Column(name = "frequency")
+    private Set<String> allowedCompoundingFrequencies = new LinkedHashSet<>();
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "product_payout_options", joinColumns = @JoinColumn(name = "product_code"))
+    @Column(name = "frequency")
+    private Set<String> allowedPayoutFrequencies = new LinkedHashSet<>();
+
+    @Column(name = "day_count_convention")
+    private String dayCountConvention = "ACTUAL_365";
+
+    @Column(name = "premature_closure_allowed")
+    private Boolean prematureClosureAllowed = true;
 
     @Column(name = "status")
     private String status;
@@ -104,12 +125,22 @@ public class Product {
     public void setMaxRate(BigDecimal maxRate) { this.maxRate = maxRate; }
     public BigDecimal getMinDeposit() { return minDeposit; }
     public void setMinDeposit(BigDecimal minDeposit) { this.minDeposit = minDeposit; }
+    public BigDecimal getMaxDeposit() { return maxDeposit; }
+    public void setMaxDeposit(BigDecimal maxDeposit) { this.maxDeposit = maxDeposit; }
     public BigDecimal getRateCapAddon() { return rateCapAddon; }
     public void setRateCapAddon(BigDecimal rateCapAddon) { this.rateCapAddon = rateCapAddon; }
     public BigDecimal getPreMaturityPenaltyPct() { return preMaturityPenaltyPct; }
     public void setPreMaturityPenaltyPct(BigDecimal preMaturityPenaltyPct) { this.preMaturityPenaltyPct = preMaturityPenaltyPct; }
     public String getCompoundingFrequency() { return compoundingFrequency; }
     public void setCompoundingFrequency(String compoundingFrequency) { this.compoundingFrequency = compoundingFrequency; }
+    public Set<String> getAllowedCompoundingFrequencies() { return allowedCompoundingFrequencies; }
+    public void setAllowedCompoundingFrequencies(Set<String> frequencies) { this.allowedCompoundingFrequencies = frequencies; }
+    public Set<String> getAllowedPayoutFrequencies() { return allowedPayoutFrequencies; }
+    public void setAllowedPayoutFrequencies(Set<String> frequencies) { this.allowedPayoutFrequencies = frequencies; }
+    public String getDayCountConvention() { return dayCountConvention; }
+    public void setDayCountConvention(String dayCountConvention) { this.dayCountConvention = dayCountConvention; }
+    public Boolean getPrematureClosureAllowed() { return prematureClosureAllowed; }
+    public void setPrematureClosureAllowed(Boolean prematureClosureAllowed) { this.prematureClosureAllowed = prematureClosureAllowed; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
     public LocalDateTime getCreatedAt() { return createdAt; }

@@ -29,6 +29,10 @@ public class FdAccountCreateRequest {
     
     private String currency = "INR";
     private List<String> categories;
+    private String compoundingFrequency;
+    private String payoutFrequency = "MATURITY";
+    private String maturityInstruction = "PAYOUT";
+    private java.time.LocalDate startDate;
 
     public FdAccountCreateRequest() {}
 
@@ -52,4 +56,12 @@ public class FdAccountCreateRequest {
 
     public List<String> getCategories() { return categories; }
     public void setCategories(List<String> categories) { this.categories = categories; }
+    public String getCompoundingFrequency() { return compoundingFrequency; }
+    public void setCompoundingFrequency(String compoundingFrequency) { this.compoundingFrequency = compoundingFrequency; }
+    public String getPayoutFrequency() { return payoutFrequency; }
+    public void setPayoutFrequency(String payoutFrequency) { this.payoutFrequency = payoutFrequency; }
+    public String getMaturityInstruction() { return maturityInstruction; }
+    public void setMaturityInstruction(String maturityInstruction) { this.maturityInstruction = maturityInstruction; }
+    public java.time.LocalDate getStartDate() { return startDate; }
+    public void setStartDate(java.time.LocalDate startDate) { this.startDate = startDate; }
 }

@@ -5,6 +5,7 @@ import com.bank.fd.entity.FdStatement;
 import com.bank.fd.repository.FdAccountRepository;
 import com.bank.fd.repository.FdInterestTransactionRepository;
 import com.bank.fd.repository.FdStatementRepository;
+import com.bank.fd.repository.FdTransactionRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -30,6 +31,8 @@ class StatementGenerationJobTest {
     private FdStatementRepository statementRepository;
     @Mock
     private FdInterestTransactionRepository interestTransactionRepository;
+    @Mock
+    private FdTransactionRepository transactionRepository;
 
     @InjectMocks
     private StatementGenerationJob statementJob;
@@ -41,6 +44,7 @@ class StatementGenerationJobTest {
         FdAccount account = new FdAccount();
         account.setFdAccountNo("FD001000001");
         account.setPrincipalAmount(new BigDecimal("100000.00"));
+        account.setCurrentBalance(new BigDecimal("100000.00"));
         account.setAccruedInterest(new BigDecimal("3500.00")); // Lifetime accrued
 
         when(accountRepository.findAllActiveAccounts()).thenReturn(List.of(account));
@@ -56,7 +60,9 @@ class StatementGenerationJobTest {
         assertEquals("FD001000001", saved.getFdAccountNo());
         assertEquals(statementRunDate, saved.getStatementDate());
         assertEquals(new BigDecimal("100000.00"), saved.getOpeningBalance());
-        assertEquals(new BigDecimal("18.00"), saved.getInterestCredited());
-        assertEquals(new BigDecimal("100018.00"), saved.getClosingBalance());
+        assertEquals(new BigDecimal("18.00"), saved.getInterestAccrued());
+        assertEquals(BigDecimal.ZERO, saved.getInterestCapitalized());
+        assertEquals(new BigDecimal("100000.00"), saved.getClosingBalance());
+        assertEquals(new BigDecimal("3500.00"), saved.getAccruedInterest());
     }
 }

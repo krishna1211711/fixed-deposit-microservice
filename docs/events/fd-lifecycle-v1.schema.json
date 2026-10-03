@@ -13,7 +13,7 @@
     "eventId": { "type": "string", "format": "uuid" },
     "occurredAt": { "type": "string", "format": "date-time" },
     "eventType": {
-      "enum": ["FD_OPENED", "INTEREST_ACCRUED", "FD_MATURED", "FD_WITHDRAWN"]
+      "enum": ["FD_OPENED", "INTEREST_ACCRUED", "INTEREST_CAPITALIZED", "INTEREST_PAID", "FD_MATURED", "FD_RENEWED", "FD_PREMATURELY_CLOSED"]
     },
     "customerId": { "type": "string", "minLength": 1 },
     "fdAccountNo": { "type": "string", "minLength": 1 },

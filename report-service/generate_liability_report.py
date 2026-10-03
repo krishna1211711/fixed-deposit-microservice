@@ -24,7 +24,7 @@ def generate_report():
         query = """
             SELECT 
                 DATE_FORMAT(created_at, '%Y-%m') as month, 
-                SUM(principal_amount + accrued_interest) as total_liability 
+                SUM(current_balance + accrued_interest) as total_liability
             FROM fd_accounts 
             GROUP BY month 
             ORDER BY month

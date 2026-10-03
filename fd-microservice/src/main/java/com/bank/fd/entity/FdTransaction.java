@@ -3,6 +3,8 @@ package com.bank.fd.entity;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.util.UUID;
 
 @Entity
 @Table(name = "fd_transactions")
@@ -37,6 +39,12 @@ public class FdTransaction {
     @Column(name = "txn_timestamp")
     private LocalDateTime txnTimestamp;
 
+    @Column(name = "business_date", nullable = false)
+    private LocalDate businessDate;
+
+    @Column(name = "reference_id", unique = true, nullable = false)
+    private String referenceId;
+
     @Column(name = "remarks", length = 500)
     private String remarks;
 
@@ -46,6 +54,8 @@ public class FdTransaction {
     @PrePersist
     protected void onCreate() {
         txnTimestamp = LocalDateTime.now();
+        if (businessDate == null) businessDate = LocalDate.now();
+        if (referenceId == null) referenceId = UUID.randomUUID().toString();
     }
 
     public FdTransaction() {}
@@ -82,6 +92,10 @@ public class FdTransaction {
     public void setStatus(String status) { this.status = status; }
     public LocalDateTime getTxnTimestamp() { return txnTimestamp; }
     public void setTxnTimestamp(LocalDateTime txnTimestamp) { this.txnTimestamp = txnTimestamp; }
+    public LocalDate getBusinessDate() { return businessDate; }
+    public void setBusinessDate(LocalDate businessDate) { this.businessDate = businessDate; }
+    public String getReferenceId() { return referenceId; }
+    public void setReferenceId(String referenceId) { this.referenceId = referenceId; }
     public String getRemarks() { return remarks; }
     public void setRemarks(String remarks) { this.remarks = remarks; }
     public String getUuid() { return uuid; }

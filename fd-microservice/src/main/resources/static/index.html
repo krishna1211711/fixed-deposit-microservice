@@ -93,6 +93,25 @@
             </div>
 
             <div class="form-group">
+              <label class="form-label" for="input-compounding">Capitalization Frequency *</label>
+              <select id="input-compounding" class="form-control" required></select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="input-payout">Interest Payout Frequency *</label>
+              <select id="input-payout" class="form-control" required></select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="input-maturity-instruction">Maturity Instruction *</label>
+              <select id="input-maturity-instruction" class="form-control" required>
+                <option value="PAYOUT">Payout principal and interest</option>
+                <option value="RENEW_PRINCIPAL">Renew principal; pay interest</option>
+                <option value="RENEW_PRINCIPAL_AND_INTEREST">Renew principal and interest</option>
+              </select>
+            </div>
+
+            <div class="form-group">
               <label class="form-label">User Category Adjustments (Add-ons)</label>
               <div class="checkbox-group">
                 <label class="checkbox-label">
@@ -168,7 +187,9 @@
             <thead>
               <tr>
                 <th>FD Account No</th>
-                <th>Principal Amount</th>
+                <th>Original Principal</th>
+                <th>Current Balance</th>
+                <th>Accrued Interest</th>
                 <th>Interest Rate</th>
                 <th>Tenure</th>
                 <th>Maturity Date</th>
@@ -177,7 +198,7 @@
               </tr>
             </thead>
             <tbody id="my-accounts-table-body">
-              <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Loading accounts...</td></tr>
+              <tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Loading accounts...</td></tr>
             </tbody>
           </table>
         </div>
@@ -214,7 +235,7 @@
               <select id="calc-freq" class="form-control">
                 <option value="QUARTERLY" selected>Quarterly (Standard)</option>
                 <option value="MONTHLY">Monthly</option>
-                <option value="HALFYEARLY">Half-Yearly</option>
+                <option value="HALF_YEARLY">Half-Yearly</option>
                 <option value="YEARLY">Yearly</option>
               </select>
             </div>
@@ -405,8 +426,11 @@
             <tr>
               <th>Statement Date</th>
               <th>Opening Balance</th>
-              <th>Interest Credited (Delta)</th>
+              <th>Interest Accrued</th>
+              <th>Interest Capitalized</th>
+              <th>Interest Paid</th>
               <th>Closing Balance</th>
+              <th>Unsettled Accrued</th>
             </tr>
           </thead>
           <tbody id="stmt-table-body"></tbody>
