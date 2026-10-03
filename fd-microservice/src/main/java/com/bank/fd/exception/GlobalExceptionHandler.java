@@ -4,6 +4,7 @@ import com.bank.fd.dto.response.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -49,6 +50,12 @@ public class GlobalExceptionHandler {
             errors.put(fieldName, errorMessage);
         });
         return ApiResponse.error("Validation failed: " + errors.toString());
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiResponse handleUnreadableRequest(HttpMessageNotReadableException ex) {
+        return ApiResponse.error("Malformed request body or unsupported field");
     }
 
     @ExceptionHandler(AccessDeniedException.class)

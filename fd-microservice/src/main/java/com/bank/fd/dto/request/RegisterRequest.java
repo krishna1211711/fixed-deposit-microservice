@@ -16,8 +16,6 @@ public class RegisterRequest {
     @Email
     private String email;
     
-    private String role = "CUSTOMER";
-
     public RegisterRequest() {}
 
     public String getUsername() {
@@ -44,11 +42,4 @@ public class RegisterRequest {
         this.email = email;
     }
 
-    public String getRole() {
-        return role;
-    }
-
-    public void setRole(String role) {
-        this.role = role;
-    }
 }

@@ -56,7 +56,9 @@ public class AuthServiceImpl implements AuthService {
         user.setUsername(request.getUsername());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setEmail(request.getEmail());
-        user.setRole(request.getRole() != null ? request.getRole() : "CUSTOMER");
+        // Public self-registration must never accept an authority chosen by the caller.
+        // Staff roles are provisioned through a separately authorized administrative flow.
+        user.setRole("CUSTOMER");
 
         userRepository.save(user);
 

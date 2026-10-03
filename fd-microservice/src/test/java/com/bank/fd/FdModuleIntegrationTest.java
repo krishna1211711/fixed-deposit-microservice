@@ -140,6 +140,43 @@ class FdModuleIntegrationTest {
     }
 
     @Test
+    @DisplayName("Public registration cannot assign an elevated role")
+    void publicRegistrationCannotEscalateRole() throws Exception {
+        String attemptedAdminRegistration = """
+                {
+                  "username": "self-appointed-admin",
+                  "password": "secure-password",
+                  "email": "self-appointed-admin@example.com",
+                  "role": "ADMIN"
+                }
+                """;
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(attemptedAdminRegistration))
+                .andExpect(status().isBadRequest());
+
+        assertTrue(userRepository.findByUsername("self-appointed-admin").isEmpty());
+
+        String customerRegistration = """
+                {
+                  "username": "new-customer",
+                  "password": "secure-password",
+                  "email": "new-customer@example.com"
+                }
+                """;
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(customerRegistration))
+                .andExpect(status().isOk());
+
+        User registeredUser = userRepository.findByUsername("new-customer")
+                .orElseThrow(() -> new AssertionError("Registered user was not persisted"));
+        assertEquals("CUSTOMER", registeredUser.getRole());
+    }
+
+    @Test
     @DisplayName("Authenticated customer can use the manual-compatible FD calculator endpoint")
     void testAuthenticatedFdCalculator() throws Exception {
         FdCalculateRequest req = new FdCalculateRequest();
