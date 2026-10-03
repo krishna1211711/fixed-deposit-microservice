@@ -15,6 +15,7 @@ import { Product } from '../../../core/models/models';
   styleUrls: ['./fd-create.component.scss']
 })
 export class FdCreateComponent implements OnInit {
+  private openingIdempotencyKey: string | null = null;
   products: Product[] = [];
   
   request = {
@@ -72,8 +73,10 @@ export class FdCreateComponent implements OnInit {
     this.error = '';
     this.successMessage = '';
 
-    this.fdService.createAccount(this.request).subscribe({
+    this.openingIdempotencyKey ??= crypto.randomUUID();
+    this.fdService.createAccount(this.request, this.openingIdempotencyKey).subscribe({
       next: (res) => {
+        this.openingIdempotencyKey = null;
         this.loading = false;
         this.successMessage = `Account ${res.fdAccountNo} created successfully!`;
         setTimeout(() => {

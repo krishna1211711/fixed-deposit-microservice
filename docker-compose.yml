@@ -40,6 +40,22 @@ services:
       timeout: 5s
       retries: 20
 
+  notification-mysql:
+    image: mysql:8.0
+    container_name: fd-notification-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${NOTIFICATION_DB_ROOT_PASSWORD:-notification_root_demo_password}
+      MYSQL_DATABASE: ${NOTIFICATION_DB_NAME:-notification_db}
+      MYSQL_USER: ${NOTIFICATION_DB_USERNAME:-notification_user}
+      MYSQL_PASSWORD: ${NOTIFICATION_DB_PASSWORD:-notification_demo_password}
+    volumes:
+      - notification-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${NOTIFICATION_DB_ROOT_PASSWORD:-notification_root_demo_password}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   fd-service:
     build: ./fd-microservice
     container_name: fd-microservice
@@ -57,8 +73,6 @@ services:
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-fd_user}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-fd_demo_password}
       JWT_SECRET: ${JWT_SECRET:-fd-local-demo-secret-change-before-any-real-deployment}
-      SPRING_MAIL_HOST: mailpit
-      SPRING_MAIL_PORT: 1025
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       APP_EVENTS_KAFKA_ENABLED: "true"
       FD_EVENTS_TOPIC: fd.lifecycle.v1
@@ -98,14 +112,10 @@ services:
     expose:
       - "5000"
     depends_on:
-      mysql:
+      fd-service:
         condition: service_healthy
     environment:
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_USER: ${DB_USERNAME:-fd_user}
-      DB_PASSWORD: ${DB_PASSWORD:-fd_demo_password}
-      DB_NAME: ${DB_NAME:-fd_bank_db}
+      FD_SERVICE_URI: http://fd-service:8080
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
       interval: 10s
@@ -118,7 +128,7 @@ services:
     expose:
       - "5001"
     depends_on:
-      mysql:
+      notification-mysql:
         condition: service_healthy
       kafka:
         condition: service_healthy
@@ -128,11 +138,12 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       FD_EVENTS_TOPIC: fd.lifecycle.v1
       KAFKA_CONSUMER_GROUP: fd-notification-service-v1
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_USER: ${DB_USERNAME:-fd_user}
-      DB_PASSWORD: ${DB_PASSWORD:-fd_demo_password}
-      DB_NAME: ${DB_NAME:-fd_bank_db}
+      FD_EVENTS_DLQ_TOPIC: fd.lifecycle.v1.dlq
+      NOTIFICATION_DB_HOST: notification-mysql
+      NOTIFICATION_DB_PORT: 3306
+      NOTIFICATION_DB_USER: ${NOTIFICATION_DB_USERNAME:-notification_user}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:-notification_demo_password}
+      NOTIFICATION_DB_NAME: ${NOTIFICATION_DB_NAME:-notification_db}
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
     healthcheck:
@@ -150,3 +161,4 @@ services:
 
 volumes:
   mysql-data:
+  notification-mysql-data:

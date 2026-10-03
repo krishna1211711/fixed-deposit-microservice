@@ -11,7 +11,7 @@ The integration baseline is the public `BT-Team-1` repository supplied by the te
 | JWT login and registration | `/api/auth/login`, `/api/auth/register` | Implemented locally; replaceable by team Auth service |
 | Product search and retrieval | `/api/product/search`, `/api/product/{code}` | Implemented; product code remains the stable key |
 | FD calculation | `/api/fd/calculator/simulate`, `/api/fd/calculate` | Implemented locally; second path preserves the manual contract |
-| FD account creation | `/api/fd/account/create`, `/api/fd/account/create-with-txn` | Implemented with product validation and atomic initial deposit |
+| FD account creation | `/api/fd/account/create`, `/api/fd/account/create-with-txn` | Implemented with required `Idempotency-Key`, product validation, atomic initial deposit, and transactional outbox |
 | Transactions | `/api/fd/account/{number}/transactions` | Implemented with GL debit and credit accounts |
 | Statements | `/api/fd/account/{number}/statements` | Implemented |
 | Premature withdrawal | `/api/fd/account/withdraw` | Implemented with penalty audit entry |
@@ -22,7 +22,7 @@ The integration baseline is the public `BT-Team-1` repository supplied by the te
 
 The shared Swagger creates an FD with `{accountName, calcId}` at `POST /api/v1/accounts`. It expects the FD service to fetch the customer profile, calculation, and product from three other running services. Those repositories and response payloads are not present in the supplied team repository, so a live adapter cannot be verified yet.
 
-This module currently accepts the resolved values at `POST /api/fd/account/create`: `customerId`, `productCode`, `principalAmount`, `termMonths`, `branchCode`, `currency`, optional customer categories, a product-permitted `compoundingFrequency`, a product-permitted `payoutFrequency`, and a `maturityInstruction`. This is the stable standalone demonstration path.
+This module currently accepts the resolved values at `POST /api/fd/account/create`: `customerId`, `productCode`, `principalAmount`, `termMonths`, `branchCode`, `currency`, optional customer categories, a product-permitted `compoundingFrequency`, a product-permitted `payoutFrequency`, and a `maturityInstruction`. It also requires a stable `Idempotency-Key`. This is the standalone demonstration path; team integration should resolve/validate the customer through `GET /customers/{customerId}` and use service authentication rather than adding a database relationship.
 
 Before the final team merge, agree on these points:
 
@@ -37,7 +37,7 @@ Before the final team merge, agree on these points:
 
 Use the team API gateway as the single browser entry point. Keep authentication in the Auth service, product rules in Product and Pricing, calculations in the calculator, and lifecycle state in this FD service. Pass JWTs through unchanged. Configure external service base URLs by environment variable and use timeouts, retries only for safe reads, and idempotency keys for account opening and payouts. Kafka is the asynchronous boundary for notifications and later analytics, audit, or fraud consumers.
 
-The ER diagram aligns on `users`, customer details, `products`, `fd_accounts`, `fd_transactions`, `fd_interest_transactions`, `fd_statements`, and `notification_log`. This module uses those stable identifiers and preserves `product_code`, `customer_id`, and `fd_account_no` for cross-service references.
+The FD-owned ER diagram is intentionally independent. `product_code` and `customer_id` are stable cross-service identifiers without joins or foreign keys; `fd_account_no` is the FD aggregate identifier. Notifications own their inbox/delivery tables in `notification_db`, and reports call FD APIs rather than reading FD tables.
 
 The machine-readable Kafka contract is in `docs/events/fd-lifecycle-v1.schema.json`. Messages are keyed by `fdAccountNo`, use schema version `1.0`, and carry a UUID `eventId` so every consumer can implement idempotency independently.
 

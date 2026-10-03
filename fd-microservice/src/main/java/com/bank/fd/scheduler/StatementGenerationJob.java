@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import com.bank.fd.service.JobExecutionCoordinator;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -25,20 +26,26 @@ public class StatementGenerationJob {
     private final FdStatementRepository statementRepository;
     private final FdInterestTransactionRepository interestTransactionRepository;
     private final FdTransactionRepository transactionRepository;
+    private final JobExecutionCoordinator jobExecutionCoordinator;
 
     public StatementGenerationJob(FdAccountRepository accountRepository,
                                   FdStatementRepository statementRepository,
                                   FdInterestTransactionRepository interestTransactionRepository,
-                                  FdTransactionRepository transactionRepository) {
+                                  FdTransactionRepository transactionRepository,
+                                  JobExecutionCoordinator jobExecutionCoordinator) {
         this.accountRepository = accountRepository;
         this.statementRepository = statementRepository;
         this.interestTransactionRepository = interestTransactionRepository;
         this.transactionRepository = transactionRepository;
+        this.jobExecutionCoordinator = jobExecutionCoordinator;
     }
 
     @Scheduled(cron = "0 0 2 * * ?")
     public void executeStatementGeneration() {
-        generateStatements(LocalDate.now());
+        LocalDate businessDate = LocalDate.now();
+        jobExecutionCoordinator.executeOnce(
+                "STATEMENT_GENERATION", businessDate,
+                () -> generateStatements(businessDate));
     }
 
     /**

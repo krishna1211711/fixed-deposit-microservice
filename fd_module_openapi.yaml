@@ -62,10 +62,20 @@ paths:
   /account/create:
     post:
       summary: Create FD Account & Post Initial Deposit Transaction
-      description: Validates product parameters, calculates effective rate (including capped category add-ons), generates a unique 10-digit account number, creates the FD account, and logs the initial DEPOSIT transaction within a single atomic `@Transactional` boundary.
+      description: Validates booked product terms, creates the account, initial DEPOSIT transaction, and FD_OPENED outbox event in one database transaction. Replaying the same Idempotency-Key and body returns the stored response; using the key with a different body returns 409.
       operationId: createFdAccount
       tags:
         - FD Account Lifecycle
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: Client-generated stable key for this logical account-opening command.
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 80
+            pattern: '^[A-Za-z0-9._:-]+$'
       requestBody:
         required: true
         content:
@@ -112,6 +122,8 @@ paths:
           $ref: '#/components/responses/403Forbidden'
         '404':
           $ref: '#/components/responses/404NotFound'
+        '409':
+          description: Idempotency-Key was already used with a different request payload
 
   /account/create-with-txn:
     $ref: '#/paths/~1account~1create'

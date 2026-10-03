@@ -3,6 +3,7 @@ package com.bank.fd.scheduler;
 import com.bank.fd.entity.FdAccount;
 import com.bank.fd.repository.FdAccountRepository;
 import com.bank.fd.service.InterestLifecycleService;
+import com.bank.fd.service.JobExecutionCoordinator;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,16 +17,22 @@ public class DailyInterestAccrualJob {
 
     private final FdAccountRepository accountRepository;
     private final InterestLifecycleService interestLifecycleService;
+    private final JobExecutionCoordinator jobExecutionCoordinator;
 
     public DailyInterestAccrualJob(FdAccountRepository accountRepository,
-                                   InterestLifecycleService interestLifecycleService) {
+                                   InterestLifecycleService interestLifecycleService,
+                                   JobExecutionCoordinator jobExecutionCoordinator) {
         this.accountRepository = accountRepository;
         this.interestLifecycleService = interestLifecycleService;
+        this.jobExecutionCoordinator = jobExecutionCoordinator;
     }
 
     @Scheduled(cron = "0 0 1 * * ?")
     public void executeDailyAccrual() {
-        processInterestAccrual(LocalDate.now());
+        LocalDate businessDate = LocalDate.now();
+        jobExecutionCoordinator.executeOnce(
+                "DAILY_INTEREST_ACCRUAL", businessDate,
+                () -> processInterestAccrual(businessDate));
     }
 
     public void processInterestAccrual(LocalDate date) {

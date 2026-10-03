@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-mysql-deployment
+  namespace: fd-banking
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-mysql
+  template:
+    metadata:
+      labels:
+        app: notification-mysql
+    spec:
+      containers:
+        - name: notification-mysql
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: fd-secret
+                  key: NOTIFICATION_DB_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: fd-config
+                  key: NOTIFICATION_DB_NAME
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: fd-secret
+                  key: NOTIFICATION_DB_USERNAME
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: fd-secret
+                  key: NOTIFICATION_DB_PASSWORD
+          volumeMounts:
+            - name: notification-mysql-storage
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: notification-mysql-storage
+          persistentVolumeClaim:
+            claimName: notification-mysql-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-mysql-service
+  namespace: fd-banking
+spec:
+  ports:
+    - port: 3306
+      targetPort: 3306
+  selector:
+    app: notification-mysql
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: notification-mysql-pvc
+  namespace: fd-banking
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi

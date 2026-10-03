@@ -1,0 +1,150 @@
+package com.bank.fd.event;
+
+import com.bank.fd.entity.FdAccount;
+import com.bank.fd.entity.FdOutboxEvent;
+import com.bank.fd.repository.FdAccountRepository;
+import com.bank.fd.repository.FdOutboxEventRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.UUID;
+
+@Component
+public class LifecycleOutboxWriter {
+    private final FdOutboxEventRepository outboxRepository;
+    private final FdAccountRepository accountRepository;
+    private final ObjectMapper objectMapper;
+
+    @Value("${app.events.topic:fd.lifecycle.v1}")
+    private String topic;
+
+    public LifecycleOutboxWriter(FdOutboxEventRepository outboxRepository,
+                                 FdAccountRepository accountRepository,
+                                 ObjectMapper objectMapper) {
+        this.outboxRepository = outboxRepository;
+        this.accountRepository = accountRepository;
+        this.objectMapper = objectMapper;
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
+    public void onOpened(FDOpenedEvent event) {
+        enqueue("FD_OPENED", event.getCustomerId(), event.getFdAccountNo(), event.getPrincipalAmount(),
+                event.getMaturityDate(), "Fixed Deposit Account Opened: " + event.getFdAccountNo(),
+                "Your fixed deposit account " + event.getFdAccountNo() + " has been opened.", Map.of());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
+    public void onAccrued(InterestAccruedEvent event) {
+        enqueue("INTEREST_ACCRUED", event.getCustomerId(), event.getFdAccountNo(), event.getInterestAmount(),
+                event.getAccrualDate(), "FD Interest Accrued: " + event.getFdAccountNo(),
+                "Interest has accrued to fixed deposit account " + event.getFdAccountNo() + ".", Map.of());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
+    public void onCapitalized(InterestCapitalizedEvent event) {
+        enqueue("INTEREST_CAPITALIZED", event.getCustomerId(), event.getFdAccountNo(), event.getAmount(),
+                event.getBusinessDate(), "FD Interest Capitalized: " + event.getFdAccountNo(),
+                "Accrued interest was capitalized into fixed deposit account " + event.getFdAccountNo() + ".", Map.of());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
+    public void onPaid(InterestPaidEvent event) {
+        enqueue("INTEREST_PAID", event.getCustomerId(), event.getFdAccountNo(), event.getAmount(),
+                event.getBusinessDate(), "FD Interest Paid: " + event.getFdAccountNo(),
+                "Interest was paid from fixed deposit account " + event.getFdAccountNo() + ".", Map.of());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
+    public void onMatured(FDMaturedEvent event) {
+        enqueue("FD_MATURED", event.getCustomerId(), event.getFdAccountNo(), event.getMaturityAmount(),
+                event.getMaturityDate(), "Fixed Deposit Matured: " + event.getFdAccountNo(),
+                "Your fixed deposit account " + event.getFdAccountNo() + " has matured.", Map.of());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
+    public void onWithdrawn(FDWithdrawnEvent event) {
+        enqueue("FD_PREMATURELY_CLOSED", event.getCustomerId(), event.getFdAccountNo(), event.getWithdrawalAmount(),
+                event.getWithdrawalDate(), "Fixed Deposit Closed: " + event.getFdAccountNo(),
+                "Withdrawal and closure were processed for fixed deposit account " + event.getFdAccountNo() + ".",
+                Map.of("penaltyApplied", event.isPenaltyApplied()));
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
+    public void onRenewed(FDRenewedEvent event) {
+        enqueue("FD_RENEWED", event.getCustomerId(), event.getRenewalAccountNo(), event.getAmount(),
+                event.getRenewalDate(), "Fixed Deposit Renewed: " + event.getRenewalAccountNo(),
+                "Fixed deposit " + event.getFdAccountNo() + " was renewed as " + event.getRenewalAccountNo() + ".",
+                Map.of("originalFdAccountNo", event.getFdAccountNo(),
+                        "renewalAccountNo", event.getRenewalAccountNo()));
+    }
+
+    private void enqueue(String eventType, String customerId, String fdAccountNo, BigDecimal amount,
+                         LocalDate businessDate, String subject, String summary,
+                         Map<String, Object> additionalData) {
+        FdAccount account = accountRepository.findById(fdAccountNo).orElse(null);
+        String eventId = UUID.randomUUID().toString();
+        String correlationId = MDC.get("correlationId");
+        if (correlationId == null || correlationId.isBlank()) correlationId = eventId;
+        String currency = account != null && account.getCurrency() != null ? account.getCurrency() : "INR";
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("schemaVersion", "1.0");
+        payload.put("eventId", eventId);
+        payload.put("correlationId", correlationId);
+        payload.put("causationId", MDC.get("causationId"));
+        payload.put("producer", "fd-account-service");
+        payload.put("occurredAt", Instant.now().toString());
+        payload.put("eventType", eventType);
+        payload.put("aggregateType", "FD_ACCOUNT");
+        payload.put("aggregateId", fdAccountNo);
+        payload.put("customerId", customerId);
+        payload.put("fdAccountNo", fdAccountNo);
+        payload.put("productCode", account != null ? account.getProductCode() : null);
+        payload.put("currency", currency);
+        payload.put("amount", amount);
+        payload.put("businessDate", businessDate);
+        payload.put("status", account != null ? account.getStatus() : null);
+        payload.put("principalAmount", account != null ? account.getPrincipalAmount() : null);
+        payload.put("currentBalance", account != null ? account.getCurrentBalance() : null);
+        payload.put("accruedInterest", account != null ? account.getAccruedInterest() : null);
+        payload.put("subject", subject);
+        payload.put("messageBody", summary + " Amount: " + currency + " " + amount + ".");
+        payload.putAll(additionalData);
+
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+        FdOutboxEvent outbox = new FdOutboxEvent();
+        outbox.setEventId(eventId);
+        outbox.setAggregateType("FD_ACCOUNT");
+        outbox.setAggregateId(fdAccountNo);
+        outbox.setEventType(eventType);
+        outbox.setTopic(topic);
+        outbox.setPartitionKey(fdAccountNo);
+        outbox.setPayload(serialize(payload));
+        outbox.setStatus("PENDING");
+        outbox.setAttemptCount(0);
+        outbox.setOccurredAt(now);
+        outbox.setCreatedAt(now);
+        outbox.setNextAttemptAt(now);
+        outboxRepository.save(outbox);
+    }
+
+    private String serialize(Map<String, Object> payload) {
+        try {
+            return objectMapper.writeValueAsString(payload);
+        } catch (JsonProcessingException error) {
+            throw new IllegalStateException("Unable to serialize FD lifecycle event", error);
+        }
+    }
+}

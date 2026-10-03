@@ -41,6 +41,12 @@ public class ReportController {
         return ResponseEntity.ok(reportService.getCustomerPortfolio(customerId));
     }
 
+    @GetMapping("/customer-portfolio/{customerId}")
+    @PreAuthorize("hasRole('BANK_OFFICER') or hasRole('ADMIN')")
+    public ResponseEntity<List<FdPortfolioReport>> getCustomerPortfolioForOfficer(@PathVariable String customerId) {
+        return ResponseEntity.ok(reportService.getCustomerPortfolio(customerId));
+    }
+
     @GetMapping("/export/csv")
     @PreAuthorize("hasRole('BANK_OFFICER') or hasRole('ADMIN')")
     public ResponseEntity<byte[]> exportCsv() {

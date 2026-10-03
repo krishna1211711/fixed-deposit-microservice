@@ -8,6 +8,7 @@ import com.bank.fd.dto.response.WithdrawalResponse;
 import com.bank.fd.entity.FdStatement;
 import com.bank.fd.entity.FdTransaction;
 import com.bank.fd.service.FdAccountService;
+import com.bank.fd.service.FdAccountOpeningService;
 import com.bank.fd.service.MaturityService;
 import com.bank.fd.service.WithdrawalService;
 import jakarta.validation.Valid;
@@ -24,22 +25,28 @@ import java.util.List;
 public class FdAccountController {
 
     private final FdAccountService accountService;
+    private final FdAccountOpeningService accountOpeningService;
     private final WithdrawalService withdrawalService;
     private final MaturityService maturityService;
 
     public FdAccountController(FdAccountService accountService,
+                                FdAccountOpeningService accountOpeningService,
                                 WithdrawalService withdrawalService,
                                 MaturityService maturityService) {
         this.accountService = accountService;
+        this.accountOpeningService = accountOpeningService;
         this.withdrawalService = withdrawalService;
         this.maturityService = maturityService;
     }
 
     @PostMapping({"/account/create", "/account/create-with-txn"})
     @PreAuthorize("hasRole('BANK_OFFICER') or hasRole('ADMIN')")
-    public ResponseEntity<FdAccountResponse> createAccount(@Valid @RequestBody FdAccountCreateRequest request, Authentication authentication) {
+    public ResponseEntity<FdAccountResponse> createAccount(
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @Valid @RequestBody FdAccountCreateRequest request,
+            Authentication authentication) {
         String createdBy = authentication != null ? authentication.getName() : "SYSTEM";
-        return ResponseEntity.ok(accountService.createAccount(request, createdBy));
+        return ResponseEntity.ok(accountOpeningService.open(request, createdBy, idempotencyKey));
     }
 
     @GetMapping("/accounts/my")

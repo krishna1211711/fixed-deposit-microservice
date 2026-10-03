@@ -1,32 +1,37 @@
-# Project Completion Status
+# Project Status
 
-## Completed in this repository
+## Implemented
 
-- Fixed-deposit calculation, product validation, account opening with atomic initial transaction, lifecycle queries, statements, premature withdrawal, maturity closure, and protected reports.
-- JWT login plus CUSTOMER, BANK_OFFICER, and ADMIN authorization through the API gateway.
-- ISO-style three-letter currencies with currency-specific decimal precision and seeded INR, USD, EUR, GBP, JPY, AED, and KWD products.
-- Daily interest and daily statement jobs with duplicate-run protection; administrative manual triggers remain available for demonstrations.
-- Kafka topic `fd.lifecycle.v1`, after-commit event publication, stable account keys, UUID event IDs, and a versioned JSON Schema contract.
-- Independent Python notification microservice with a Kafka consumer group, event-ID idempotency, notification audit records, SMTP delivery, and health reporting.
-- Independent protected report microservice.
-- Eight-service Docker Compose demonstration with MySQL, Kafka, Mailpit, health checks, and deterministic demo users/data.
-- Kubernetes manifests for every module, probes, resource bounds, and HPAs for FD, report, and notification services.
-- Maven, Angular, Python, Compose, API authorization, scheduler-idempotency, and end-to-end Kafka verification.
-- OpenAPI, integration contract, lab-manual traceability, test evidence, demo runbook, technical report, PDF, presentation, narrated video, and recording script.
-- CI workflow and repository cleanup so generated dependencies, build output, secrets, and temporary artifact tooling are not committed.
+- Java 21 target, Spring Boot 3.5.16, Flyway, MySQL 8, Kafka 3.9, API gateway, Angular UI, Python report and notification services.
+- Realistic FD lifecycle: original principal, current balance, daily `ACTUAL_365` accrual, independent capitalization and payout frequencies, calendar schedules, statements, maturity instructions, renewal, and premature closure.
+- Booked terms are snapshotted on each account so later product changes do not rewrite active contracts.
+- Precise business events and GL meanings for deposit, accrual, capitalization, payout, maturity, renewal, and premature closure.
+- Account opening requires an `Idempotency-Key`; the original response is stored and replayed, while changed-payload reuse returns HTTP 409.
+- Accrual, capitalization, payout, maturity, transaction references, and statements have operation-level duplicate protection.
+- Scheduled accrual, statement, and maturity jobs use a database claim keyed by job and business date, allowing safe multi-replica scheduling.
+- FD state and its Kafka event are committed atomically through `fd_outbox_events`; the relay retries failed publication and recovers stale claims.
+- Notification is an independent Kafka consumer with its own MySQL schema, inbox deduplication, retries, delivery audit, and dead-letter publication.
+- Reporting is independently deployable and obtains data only through authenticated FD APIs; it has no FD database credentials.
+- `fd_accounts.customer_id` and `fd_accounts.product_code` are cross-context identifiers without foreign keys. Internal FD-owned tables retain appropriate FKs.
+- Separate FD ER diagram, OpenAPI HTTP contract, AsyncAPI event contract, Docker Compose topology, CI, and demonstration documentation.
 
-## Intentionally left for integration/deployment time
+## Deliberately local for the college demonstration
 
-- Contract testing against other groups' runnable Auth, Customer, Product, and Calculation services. Their supplied repository defines contracts but does not yet provide every runnable dependency.
-- Selecting and provisioning a cloud subscription. Local Docker is the required zero-cost path; Azure for Students can be evaluated later without changing the service boundaries.
-- Replacing Mailpit with a real email provider. This is optional and not required for the lab demonstration.
-- Production hardening beyond the project scope: managed Kafka, TLS, secret manager, database backups/read replicas, observability, transactional outbox, dead-letter topic, and load testing.
-- Professor submission or team merge approval, which must be coordinated by the group leader.
+- Identity, customer, and product reference implementations remain in the FD application so this repository runs independently. At team integration time their ports must be bound to the other groups' versioned APIs; FD persistence must continue storing identifiers/snapshotted terms only.
+- Mailpit is the free local email sink. A real provider is optional and configured only through secrets.
+- Docker Compose is the verified zero-cost environment. Kubernetes files are deployment examples, not proof of a live cloud environment.
 
-## Credentials and actions needed from the group leader
+## External work that cannot be completed inside this repository
 
-- **Now:** authenticate GitHub in the browser only if Git Credential Manager prompts during push.
-- **Before group integration:** obtain the other groups' runnable branch/tag, base URLs, test users, and any public-key/JWT issuer details they choose.
-- **Before cloud deployment:** provide access to the selected student cloud subscription and container registry. Do not send passwords in chat or commit them; use the provider login and secret store.
-- **For real email only:** provide a verified sender/domain and API key through deployment secrets. Mailpit needs no credentials.
-- **For submission:** confirm student names, registration numbers, course/section, professor name, and any institution cover-page format so the final report/deck metadata can be personalized.
+- Contract tests against the other groups' running Auth, Customer, Product, and Calculation services require their deployable URLs/builds, issuer/public-key details, and test identities.
+- Cloud deployment requires a selected Azure/student subscription and container registry session.
+- Professor submission requires final names, registration numbers, section, professor details, and the team's chosen submission channel.
+
+## Credentials needed later
+
+- GitHub browser authentication only when pushing or opening a pull request.
+- Team service base URLs and non-production test credentials for cross-group integration.
+- Azure/student account and registry login only if cloud deployment is chosen.
+- A verified sender plus provider secret only if replacing Mailpit with real email.
+
+Never put passwords, tokens, or cloud keys in source control or chat transcripts; inject them through environment variables or the deployment secret store.

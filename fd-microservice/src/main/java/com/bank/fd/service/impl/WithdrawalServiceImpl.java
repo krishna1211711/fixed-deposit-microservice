@@ -111,7 +111,8 @@ public class WithdrawalServiceImpl implements WithdrawalService {
         statement.setAccruedInterest(BigDecimal.ZERO);
         statementRepository.save(statement);
 
-        eventPublisher.publishFdWithdrawn(account.getFdAccountNo(), account.getCustomerId(), netPayout, penaltyAmount);
+        eventPublisher.publishFdWithdrawn(
+                account.getFdAccountNo(), account.getCustomerId(), netPayout, penaltyAmount, withdrawalDate);
 
         WithdrawalResponse response = new WithdrawalResponse();
         response.setStatus("PREMATURE_CLOSED");

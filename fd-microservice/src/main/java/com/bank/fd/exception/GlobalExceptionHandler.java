@@ -34,6 +34,12 @@ public class GlobalExceptionHandler {
         return ApiResponse.error(ex.getMessage());
     }
 
+    @ExceptionHandler(IdempotencyConflictException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiResponse handleIdempotencyConflict(IdempotencyConflictException ex) {
+        return ApiResponse.error(ex.getMessage());
+    }
+
     @ExceptionHandler(InsufficientFundsException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiResponse handleInsufficientFundsException(InsufficientFundsException ex) {

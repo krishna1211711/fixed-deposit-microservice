@@ -1,0 +1,86 @@
+asyncapi: 3.0.0
+info:
+  title: Fixed Deposit Lifecycle Events
+  version: 1.0.0
+  description: Versioned events emitted by the FD account service through its transactional outbox.
+defaultContentType: application/json
+channels:
+  fdLifecycle:
+    address: fd.lifecycle.v1
+    messages:
+      lifecycleEvent:
+        $ref: '#/components/messages/FdLifecycleEvent'
+  fdLifecycleDeadLetter:
+    address: fd.lifecycle.v1.dlq
+    messages:
+      failedLifecycleEvent:
+        $ref: '#/components/messages/FailedFdLifecycleEvent'
+operations:
+  publishLifecycleEvent:
+    action: send
+    channel: { $ref: '#/channels/fdLifecycle' }
+  consumeLifecycleEvent:
+    action: receive
+    channel: { $ref: '#/channels/fdLifecycle' }
+  publishDeadLetter:
+    action: send
+    channel: { $ref: '#/channels/fdLifecycleDeadLetter' }
+components:
+  messages:
+    FdLifecycleEvent:
+      name: FdLifecycleEvent
+      payload: { $ref: '#/components/schemas/FdLifecycleEvent' }
+    FailedFdLifecycleEvent:
+      name: FailedFdLifecycleEvent
+      payload:
+        type: object
+        required: [sourceTopic, failedAt, error, event]
+        properties:
+          sourceTopic: { type: string }
+          failedAt: { type: string, format: date-time }
+          error: { type: string, maxLength: 1000 }
+          event: { $ref: '#/components/schemas/FdLifecycleEvent' }
+  schemas:
+    FdLifecycleEvent:
+      type: object
+      additionalProperties: true
+      required:
+        - schemaVersion
+        - eventId
+        - correlationId
+        - producer
+        - occurredAt
+        - eventType
+        - aggregateType
+        - aggregateId
+        - customerId
+        - fdAccountNo
+        - currency
+        - amount
+        - businessDate
+        - subject
+        - messageBody
+      properties:
+        schemaVersion: { type: string, const: '1.0' }
+        eventId: { type: string, format: uuid }
+        correlationId: { type: string }
+        causationId: { type: [string, 'null'] }
+        producer: { type: string, const: fd-account-service }
+        occurredAt: { type: string, format: date-time }
+        eventType:
+          type: string
+          enum: [FD_OPENED, INTEREST_ACCRUED, INTEREST_CAPITALIZED, INTEREST_PAID, FD_MATURED, FD_RENEWED, FD_PREMATURELY_CLOSED]
+        aggregateType: { type: string, const: FD_ACCOUNT }
+        aggregateId: { type: string }
+        customerId: { type: string }
+        fdAccountNo: { type: string }
+        productCode: { type: [string, 'null'] }
+        currency: { type: string, pattern: '^[A-Z]{3}$' }
+        amount: { type: number }
+        businessDate: { type: string, format: date }
+        status: { type: [string, 'null'] }
+        principalAmount: { type: [number, 'null'] }
+        currentBalance: { type: [number, 'null'] }
+        accruedInterest: { type: [number, 'null'] }
+        subject: { type: string }
+        messageBody: { type: string }

@@ -20,28 +20,11 @@ spec:
           ports:
             - containerPort: 5000
           env:
-            - name: DB_HOST
+            - name: FD_SERVICE_URI
               valueFrom:
                 configMapKeyRef:
                   name: fd-config
-                  key: DB_HOST
-            - name: DB_PORT
-              valueFrom:
-                configMapKeyRef:
-                  name: fd-config
-                  key: DB_PORT
-            - name: DB_NAME
-              valueFrom:
-                configMapKeyRef:
-                  name: fd-config
-                  key: DB_NAME
-            - name: DB_USER
-              value: root
-            - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: fd-secret
-                  key: DB_PASSWORD
+                  key: FD_SERVICE_URI
           readinessProbe:
             httpGet:
               path: /health

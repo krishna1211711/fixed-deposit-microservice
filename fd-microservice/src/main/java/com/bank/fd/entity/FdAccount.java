@@ -100,10 +100,6 @@ public class FdAccount {
     @Column(name = "uuid", unique = true, nullable = false)
     private String uuid;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_code", insertable = false, updatable = false)
-    private Product product;
-
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -191,6 +187,4 @@ public class FdAccount {
     public void setModifiedAt(LocalDateTime modifiedAt) { this.modifiedAt = modifiedAt; }
     public String getUuid() { return uuid; }
     public void setUuid(String uuid) { this.uuid = uuid; }
-    public Product getProduct() { return product; }
-    public void setProduct(Product product) { this.product = product; }
 }

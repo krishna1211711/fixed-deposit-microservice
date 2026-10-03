@@ -92,7 +92,9 @@ class WithdrawalServiceTest {
                 new BigDecimal("35.00"), request.getWithdrawalDate());
         verify(transactionService).recordPenaltyDeduction("FD001000001", new BigDecimal("35.00"),
                 request.getWithdrawalDate());
-        verify(eventPublisher).publishFdWithdrawn("FD001000001", "CUST001", new BigDecimal("103465.00"), new BigDecimal("35.00"));
+        verify(eventPublisher).publishFdWithdrawn(
+                "FD001000001", "CUST001", new BigDecimal("103465.00"), new BigDecimal("35.00"),
+                request.getWithdrawalDate());
     }
 
     @Test

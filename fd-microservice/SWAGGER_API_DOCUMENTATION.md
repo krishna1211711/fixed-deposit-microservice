@@ -195,7 +195,8 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
 #### 4.1 Create FD Account (Book FD)
 - **Endpoint:** `POST /api/fd/account/create`
 - **Access:** Restricted to `BANK_OFFICER` or `ADMIN`
-- **Description:** Creates an FD account, generates a 10-digit account number `[branch][seq][checksum]`, and logs an initial DEPOSIT transaction in a single database transaction.
+- **Required Header:** `Idempotency-Key: <8-80 character client key>`
+- **Description:** Creates an FD account, initial DEPOSIT, and `FD_OPENED` outbox record in one transaction. An identical retry replays the original response; changed-payload key reuse returns HTTP 409.
 - **Request Body:**
 ```json
 {

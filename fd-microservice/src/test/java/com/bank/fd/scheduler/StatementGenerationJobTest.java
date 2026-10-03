@@ -6,6 +6,7 @@ import com.bank.fd.repository.FdAccountRepository;
 import com.bank.fd.repository.FdInterestTransactionRepository;
 import com.bank.fd.repository.FdStatementRepository;
 import com.bank.fd.repository.FdTransactionRepository;
+import com.bank.fd.service.JobExecutionCoordinator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -33,6 +34,8 @@ class StatementGenerationJobTest {
     private FdInterestTransactionRepository interestTransactionRepository;
     @Mock
     private FdTransactionRepository transactionRepository;
+    @Mock
+    private JobExecutionCoordinator jobExecutionCoordinator;
 
     @InjectMocks
     private StatementGenerationJob statementJob;

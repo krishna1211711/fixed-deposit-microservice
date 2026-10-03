@@ -42,7 +42,11 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.10'
-      - run: python -m py_compile app.py generate_fd_report.py generate_liability_report.py generate_portfolio_chart.py
+      - run: pip install -r requirements.txt
+        working-directory: notification-service
+      - run: python -m unittest discover -s tests
+        working-directory: notification-service
+      - run: python -m py_compile app.py
         working-directory: report-service
       - run: python -m py_compile app.py
         working-directory: notification-service

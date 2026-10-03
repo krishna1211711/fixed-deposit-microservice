@@ -20,28 +20,31 @@ spec:
           ports:
             - containerPort: 5001
           env:
-            - name: DB_HOST
+            - name: NOTIFICATION_DB_HOST
               valueFrom:
                 configMapKeyRef:
                   name: fd-config
-                  key: DB_HOST
-            - name: DB_PORT
+                  key: NOTIFICATION_DB_HOST
+            - name: NOTIFICATION_DB_PORT
               valueFrom:
                 configMapKeyRef:
                   name: fd-config
-                  key: DB_PORT
-            - name: DB_NAME
+                  key: NOTIFICATION_DB_PORT
+            - name: NOTIFICATION_DB_NAME
               valueFrom:
                 configMapKeyRef:
                   name: fd-config
-                  key: DB_NAME
-            - name: DB_USER
-              value: root
-            - name: DB_PASSWORD
+                  key: NOTIFICATION_DB_NAME
+            - name: NOTIFICATION_DB_USER
               valueFrom:
                 secretKeyRef:
                   name: fd-secret
-                  key: DB_PASSWORD
+                  key: NOTIFICATION_DB_USERNAME
+            - name: NOTIFICATION_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: fd-secret
+                  key: NOTIFICATION_DB_PASSWORD
             - name: KAFKA_BOOTSTRAP_SERVERS
               valueFrom:
                 configMapKeyRef:
@@ -52,6 +55,11 @@ spec:
                 configMapKeyRef:
                   name: fd-config
                   key: FD_EVENTS_TOPIC
+            - name: FD_EVENTS_DLQ_TOPIC
+              valueFrom:
+                configMapKeyRef:
+                  name: fd-config
+                  key: FD_EVENTS_DLQ_TOPIC
             - name: KAFKA_CONSUMER_GROUP
               valueFrom:
                 configMapKeyRef:

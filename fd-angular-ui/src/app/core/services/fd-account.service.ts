@@ -12,8 +12,10 @@ export class FdAccountService {
 
   constructor(private http: HttpClient) {}
 
-  createAccount(request: any): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/create`, request);
+  createAccount(request: any, idempotencyKey: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/create`, request, {
+      headers: { 'Idempotency-Key': idempotencyKey }
+    });
   }
 
   getMyAccounts(): Observable<FdAccount[]> {

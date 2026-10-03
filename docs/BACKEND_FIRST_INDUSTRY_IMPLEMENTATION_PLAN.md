@@ -1,5 +1,9 @@
 # Backend-First Industry Implementation Plan
 
+## Remediation status — 4 October 2026
+
+The findings below preserve the original audit baseline. The following high-risk items have since been implemented and verified: Java 21 migration, immutable booked financial terms, removal of cross-context FD foreign keys, transactional outbox relay, notification-owned database/inbox/retry/DLQ, API-only reporting, account-opening idempotency with stored response, and distributed job/date claims. Remaining roadmap items are observability/telemetry depth, real team-service adapters and contract tests, Testcontainers fault-injection coverage, settlement integration, and cloud operations; they require either further project scope or external team/cloud dependencies.
+
 **Project:** Fixed Deposit Banking Platform  
 **Plan date:** 2026-10-03  
 **Priority:** Backend correctness, data integrity, testing, and operability before frontend work  

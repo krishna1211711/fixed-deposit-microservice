@@ -3,10 +3,13 @@ package com.bank.fd;
 import com.bank.fd.dto.request.*;
 import com.bank.fd.dto.response.*;
 import com.bank.fd.entity.CustomerProfile;
+import com.bank.fd.entity.FdOutboxEvent;
 import com.bank.fd.entity.Product;
 import com.bank.fd.entity.User;
 import com.bank.fd.repository.CustomerProfileRepository;
 import com.bank.fd.repository.FdAccountRepository;
+import com.bank.fd.repository.FdOutboxEventRepository;
+import com.bank.fd.repository.FdIdempotencyRecordRepository;
 import com.bank.fd.repository.ProductRepository;
 import com.bank.fd.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -55,6 +58,12 @@ class FdModuleIntegrationTest {
     private FdAccountRepository fdAccountRepository;
 
     @Autowired
+    private FdOutboxEventRepository outboxEventRepository;
+
+    @Autowired
+    private FdIdempotencyRecordRepository idempotencyRecordRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private String customerToken;
@@ -63,6 +72,8 @@ class FdModuleIntegrationTest {
 
     @BeforeEach
     void setupData() throws Exception {
+        outboxEventRepository.deleteAll();
+        idempotencyRecordRepository.deleteAll();
         fdAccountRepository.deleteAll();
         customerProfileRepository.deleteAll();
         userRepository.deleteAll();
@@ -217,8 +228,10 @@ class FdModuleIntegrationTest {
         createReq.setBranchCode("001");
         createReq.setCategories(List.of("SENIOR_CITIZEN")); // 6.00 + 0.50 = 6.50%
 
+        String openingKey = "lifecycle-test-opening-001";
         MvcResult createResult = mockMvc.perform(post("/api/fd/account/create")
                 .header("Authorization", "Bearer " + officerToken)
+                .header("Idempotency-Key", openingKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(createReq)))
                 .andExpect(status().isOk())
@@ -230,6 +243,35 @@ class FdModuleIntegrationTest {
         assertEquals(new BigDecimal("6.50"), createdAcct.getInterestRate());
         assertEquals("ACTIVE", createdAcct.getStatus());
         String fdAccountNo = createdAcct.getFdAccountNo();
+        List<FdOutboxEvent> openedEvents = outboxEventRepository.findAll().stream()
+                .filter(event -> "FD_OPENED".equals(event.getEventType()))
+                .toList();
+        assertEquals(1, openedEvents.size());
+        assertEquals(fdAccountNo, openedEvents.get(0).getAggregateId());
+        assertEquals("PENDING", openedEvents.get(0).getStatus());
+
+        MvcResult replayResult = mockMvc.perform(post("/api/fd/account/create")
+                        .header("Authorization", "Bearer " + officerToken)
+                        .header("Idempotency-Key", openingKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createReq)))
+                .andExpect(status().isOk())
+                .andReturn();
+        FdAccountResponse replayed = objectMapper.readValue(
+                replayResult.getResponse().getContentAsString(), FdAccountResponse.class);
+        assertEquals(fdAccountNo, replayed.getFdAccountNo());
+        assertEquals(1, fdAccountRepository.count());
+        assertEquals(1, outboxEventRepository.findAll().stream()
+                .filter(event -> "FD_OPENED".equals(event.getEventType())).count());
+
+        createReq.setPrincipalAmount(new BigDecimal("110000.00"));
+        mockMvc.perform(post("/api/fd/account/create")
+                        .header("Authorization", "Bearer " + officerToken)
+                        .header("Idempotency-Key", openingKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createReq)))
+                .andExpect(status().isConflict());
+        createReq.setPrincipalAmount(new BigDecimal("100000.00"));
 
         // Step 2: Customer views their FD accounts via /api/fd/accounts/my
         MvcResult myAccountsResult = mockMvc.perform(get("/api/fd/accounts/my")
@@ -309,6 +351,7 @@ class FdModuleIntegrationTest {
 
         MvcResult createResult = mockMvc.perform(post("/api/fd/account/create")
                 .header("Authorization", "Bearer " + officerToken)
+                .header("Idempotency-Key", "manual-close-test-opening-001")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(createReq)))
                 .andExpect(status().isOk())

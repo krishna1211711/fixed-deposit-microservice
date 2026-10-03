@@ -39,9 +39,11 @@ public class EventPublisher {
         applicationEventPublisher.publishEvent(new FDMaturedEvent(this, fdAccountNo, customerId, maturityAmount, date));
     }
 
-    public void publishFdWithdrawn(String fdAccountNo, String customerId, BigDecimal withdrawalAmount, BigDecimal penaltyApplied) {
+    public void publishFdWithdrawn(String fdAccountNo, String customerId, BigDecimal withdrawalAmount,
+                                   BigDecimal penaltyApplied, LocalDate withdrawalDate) {
         boolean penaltyFlag = penaltyApplied != null && penaltyApplied.compareTo(BigDecimal.ZERO) > 0;
-        applicationEventPublisher.publishEvent(new FDWithdrawnEvent(this, fdAccountNo, customerId, withdrawalAmount, penaltyFlag));
+        applicationEventPublisher.publishEvent(new FDWithdrawnEvent(
+                this, fdAccountNo, customerId, withdrawalAmount, penaltyFlag, withdrawalDate));
     }
 
     public void publishFdRenewed(String fdAccountNo, String renewalAccountNo, String customerId,

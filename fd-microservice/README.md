@@ -10,8 +10,8 @@ A production-grade, domain-driven Core Banking Microservice for managing the com
 - **Realistic Interest Lifecycle:** Accrues interest daily under ACTUAL/365 without changing principal balance, then capitalizes or pays it on product-permitted calendar schedules.
 - **Stable Contract Terms:** Each FD snapshots its rate, tenure, compounding frequency, payout frequency, and maturity instruction when opened.
 - **Stateless Role-Based Security:** JWT authentication with embedded `customerId` claims for fast, zero-lookup customer authorization.
-- **Asynchronous Lifecycle Events:** Kafka/direct listeners cover `FD_OPENED`, `INTEREST_ACCRUED`, `INTEREST_CAPITALIZED`, `INTEREST_PAID`, `FD_MATURED`, `FD_RENEWED`, and `FD_PREMATURELY_CLOSED`.
-- **Automated Schedulers:** Nightly interest accruals, maturity payouts, and monthly statement generation jobs.
+- **Reliable Lifecycle Events:** A transactional outbox publishes `FD_OPENED`, `INTEREST_ACCRUED`, `INTEREST_CAPITALIZED`, `INTEREST_PAID`, `FD_MATURED`, `FD_RENEWED`, and `FD_PREMATURELY_CLOSED` to Kafka.
+- **Automated Schedulers:** Daily interest, statement, and maturity jobs use database-backed single-run claims plus account-level idempotency.
 
 ---
 
@@ -51,14 +51,14 @@ All secured endpoints require the HTTP header:
 `Authorization: Bearer <jwt_token>`
 
 ### 1. Authentication (`/api/auth`)
-- `POST /api/auth/register` — Register a new user (`CUSTOMER`, `BANK_OFFICER`, `ADMIN`)
+- `POST /api/auth/register` — Self-register a `CUSTOMER`; elevated roles cannot be selected publicly.
 - `POST /api/auth/login` — Authenticate and receive JWT + `customerId`
 
 ### 2. Public Simulation (`/api/fd/calculator`)
 - `POST /api/fd/calculator/simulate` — **Public (No Auth)**. Simulate maturity amounts, interest earned, and category rate add-ons before booking.
 
 ### 3. FD Account Management (`/api/fd`)
-- `POST /api/fd/account/create` (`BANK_OFFICER`, `ADMIN`) — Opens an FD account and books the initial deposit ledger record.
+- `POST /api/fd/account/create` (`BANK_OFFICER`, `ADMIN`) — Requires `Idempotency-Key`; atomically opens the FD, books the deposit, and writes the outbox event.
 - `GET /api/fd/account/{fdAccountNo}` — Retrieves original principal, current balance, unsettled accrued interest, schedules, and maturity terms.
 - `GET /api/fd/accounts/my` (`CUSTOMER`) — Returns all FD accounts belonging to the authenticated customer.
 - `GET /api/fd/accounts/all` (`BANK_OFFICER`, `ADMIN`) — Lists all bank FD accounts.
@@ -89,7 +89,7 @@ All secured endpoints require the HTTP header:
 ```bash
 mvn clean test
 ```
-- **Total Automated Tests:** 34
+- **Total Automated Tests:** 36
 - **Test Pass Rate:** 100% (Unit, Repository, Service, and MockMvc E2E integration tests)
 
 ---
@@ -110,4 +110,4 @@ Other modules can integrate with this FD microservice as follows:
      - `INCOME_PREMATURE_PENALTY`
      - `ASSET_CUSTOMER_SAVINGS`
 4. **Notification Gateway Module:**
-   - Consume Spring Application Events or subscribe to the `notification_log` table for SMS/Email dispatches.
+   - Consume the versioned `fd.lifecycle.v1` Kafka contract and keep delivery state in the notification service's own database.

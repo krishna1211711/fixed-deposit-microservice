@@ -238,7 +238,8 @@ async function handleAccountCreation(e) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${currentToken}`
+        'Authorization': `Bearer ${currentToken}`,
+        'Idempotency-Key': crypto.randomUUID()
       },
       body: JSON.stringify(payload)
     });
