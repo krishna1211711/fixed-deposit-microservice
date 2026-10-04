@@ -12,7 +12,7 @@
   </div>
 
   <div class="actions-bar mb-4 flex gap-4">
-    <a *ngIf="account.status === 'ACTIVE'" [routerLink]="['/fd', account.fdAccountNo, 'withdraw']" class="btn btn-primary">{{ 'fdAccount.withdraw' | translate }}</a>
+    <a *ngIf="account.status === 'ACTIVE' && !authService.isAdmin()" [routerLink]="['/fd', account.fdAccountNo, 'withdraw']" class="btn btn-primary">{{ 'fdAccount.withdraw' | translate }}</a>
     <a [routerLink]="['/statements', account.fdAccountNo]" class="btn btn-outline">{{ 'fdAccount.statements' | translate }}</a>
   </div>
 

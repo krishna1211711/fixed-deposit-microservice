@@ -211,6 +211,12 @@ class FdModuleIntegrationTest {
         assertTrue(res.getMaturityAmount().compareTo(new BigDecimal("50000.00")) > 0);
 
         mockMvc.perform(post("/api/fd/calculate")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/fd/calculate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isForbidden());
@@ -336,6 +342,10 @@ class FdModuleIntegrationTest {
         assertEquals("FD_STD", summaryReports.get(0).getProductCode());
         assertEquals(1, summaryReports.get(0).getTotalAccounts());
         assertEquals(1, summaryReports.get(0).getClosedAccounts());
+
+        mockMvc.perform(get("/api/report/customer-portfolio/export/csv")
+                        .header("Authorization", "Bearer " + customerToken))
+                .andExpect(status().isOk());
     }
 
     @Test

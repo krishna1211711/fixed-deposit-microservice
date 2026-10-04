@@ -31,21 +31,22 @@ public class TimeTravelServiceImpl implements TimeTravelService {
         String op = request.getOperation() != null ? request.getOperation().toUpperCase() : "ALL";
 
         switch (op) {
-            case "INTEREST_ACCRUAL":
+            case "INTEREST_ACCRUAL", "ACCRUAL_ONLY":
                 dailyInterestAccrualJob.processInterestAccrual(targetDate);
                 break;
-            case "MATURITY_PROCESSING":
+            case "MATURITY_PROCESSING", "MATURITY_ONLY":
                 maturityProcessingJob.processMaturity(targetDate);
                 break;
             case "STATEMENT_GENERATION":
                 statementGenerationJob.generateStatements(targetDate);
                 break;
             case "ALL":
-            default:
                 dailyInterestAccrualJob.processInterestAccrual(targetDate);
                 maturityProcessingJob.processMaturity(targetDate);
                 statementGenerationJob.generateStatements(targetDate);
                 break;
+            default:
+                throw new IllegalArgumentException("Unsupported time-travel operation: " + op);
         }
 
         return ApiResponse.success("Time travel simulation executed successfully for date: " + targetDate + " [Op: " + op + "]");

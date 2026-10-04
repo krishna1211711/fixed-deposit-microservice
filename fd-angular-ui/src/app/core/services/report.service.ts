@@ -18,7 +18,8 @@ export class ReportService {
     return this.http.get<any>(`${this.apiUrl}/customer-portfolio`);
   }
 
-  exportCsv(): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/export/csv`, { responseType: 'blob' });
+  exportCsv(customerPortfolio = false): Observable<Blob> {
+    const path = customerPortfolio ? '/customer-portfolio/export/csv' : '/export/csv';
+    return this.http.get(`${this.apiUrl}${path}`, { responseType: 'blob' });
   }
 }

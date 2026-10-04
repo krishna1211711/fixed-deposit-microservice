@@ -53,8 +53,10 @@ public class FdCalculatorServiceImpl implements FdCalculatorService {
             for (String category : req.getCategories()) {
                 if ("SENIOR_CITIZEN".equalsIgnoreCase(category)) {
                     categoryAddons.put(category, new BigDecimal("0.50"));
-                } else if ("STAFF".equalsIgnoreCase(category)) {
+                } else if ("STAFF".equalsIgnoreCase(category) || "BANK_EMPLOYEE".equalsIgnoreCase(category)) {
                     categoryAddons.put(category, new BigDecimal("1.00"));
+                } else if ("PREMIUM_CUSTOMER".equalsIgnoreCase(category)) {
+                    categoryAddons.put(category, new BigDecimal("0.25"));
                 }
             }
         }

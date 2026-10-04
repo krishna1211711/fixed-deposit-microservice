@@ -19,7 +19,7 @@ public class FdCalculatorController {
     }
 
     @PostMapping("/simulate")
-    @PreAuthorize("hasRole('CUSTOMER')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<FdCalculateResponse> simulate(@Valid @RequestBody FdCalculateRequest request) {
         return ResponseEntity.ok(calculatorService.calculate(request));
     }

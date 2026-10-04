@@ -38,8 +38,13 @@ export interface Product {
   minRate: number;
   maxRate: number;
   minDeposit: number;
+  maxDeposit?: number;
   minTermMonths: number;
   maxTermMonths: number;
+  effectiveDate?: string;
+  rateCapAddon?: number;
+  preMaturityPenaltyPct?: number;
+  status?: string;
   compoundingFrequency: 'MONTHLY' | 'QUARTERLY' | 'HALF_YEARLY' | 'YEARLY';
   allowedCompoundingFrequencies: Array<'MONTHLY' | 'QUARTERLY' | 'HALF_YEARLY' | 'YEARLY'>;
   allowedPayoutFrequencies: Array<'MONTHLY' | 'QUARTERLY' | 'HALF_YEARLY' | 'YEARLY' | 'MATURITY'>;

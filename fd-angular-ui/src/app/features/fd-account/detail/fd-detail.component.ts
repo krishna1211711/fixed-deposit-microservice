@@ -5,6 +5,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { FdAccountService } from '../../../core/services/fd-account.service';
 import { FdAccount, Transaction } from '../../../core/models/models';
 import { CurrencyFormatPipe } from '../../../shared/pipes/currency-format.pipe';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-fd-detail',
@@ -24,7 +25,8 @@ export class FdDetailComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private fdService: FdAccountService,
-    private router: Router
+    private router: Router,
+    public authService: AuthService
   ) {}
 
   ngOnInit() {

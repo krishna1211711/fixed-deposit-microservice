@@ -15,10 +15,11 @@
 4. Create an INR FD for `CUST001`; point out the generated account number, initial deposit transaction, Kafka event, and captured opening email.
 5. Open the account and show its transaction history.
 6. Log in as `admin`; trigger interest accrual and statement generation.
-7. Open the customer statement, notification-service health, and captured emails in Mailpit.
-8. Use time travel or the premature-withdrawal flow to demonstrate a lifecycle transition and penalty entry.
-9. Open reports and download CSV or the Python PDF report.
-10. End with the Kubernetes manifests, health probes, and service boundaries that support later scaling.
+7. Open Product Management and explain that products control limits, rates, allowed capitalization/payout frequencies, and premature-closure policy while active FDs retain booked terms.
+8. Open the customer statement, notification-service health, and captured emails in Mailpit.
+9. Use time travel or the premature-withdrawal flow to demonstrate a lifecycle transition and penalty entry. Single-operation time travel executes only the selected operation.
+10. Open reports and download the role-appropriate customer portfolio or staff summary CSV.
+11. End with the Kubernetes manifests, health probes, and service boundaries that support later scaling.
 
 ## Recovery
 

@@ -1,0 +1,65 @@
+<div class="product-container animate-fade-in">
+  <div class="header-section mb-4 flex justify-between items-center">
+    <div>
+      <h2>FD Product Management</h2>
+      <p class="text-muted">Configure rules offered to new deposits. Existing FDs retain their booked terms.</p>
+    </div>
+    <button class="btn btn-primary" type="button" (click)="showForm = !showForm">
+      {{ showForm ? 'Cancel' : 'Create Product' }}
+    </button>
+  </div>
+
+  <div class="alert alert-success mb-4" *ngIf="success">{{ success }}</div>
+  <div class="text-danger mb-4" *ngIf="error">{{ error }}</div>
+
+  <form class="glass-card mb-4" *ngIf="showForm" (ngSubmit)="createProduct()" #productForm="ngForm">
+    <h3 class="mb-4">New FD Product</h3>
+    <div class="grid grid-cols-3 gap-4">
+      <div class="form-group"><label class="form-label">Product Code</label><input class="form-control" name="productCode" [(ngModel)]="request.productCode" required maxlength="10"></div>
+      <div class="form-group"><label class="form-label">Product Name</label><input class="form-control" name="productName" [(ngModel)]="request.productName" required></div>
+      <div class="form-group"><label class="form-label">Currency</label><select class="form-control" name="currency" [(ngModel)]="request.currency"><option *ngFor="let value of currencies" [value]="value">{{ value }}</option></select></div>
+      <div class="form-group"><label class="form-label">Effective Date</label><input type="date" class="form-control" name="effectiveDate" [(ngModel)]="request.effectiveDate" required></div>
+      <div class="form-group"><label class="form-label">Minimum Tenure (months)</label><input type="number" class="form-control" name="minTerm" [(ngModel)]="request.minTermMonths" min="1" required></div>
+      <div class="form-group"><label class="form-label">Maximum Tenure (months)</label><input type="number" class="form-control" name="maxTerm" [(ngModel)]="request.maxTermMonths" min="1" required></div>
+      <div class="form-group"><label class="form-label">Minimum Rate (%)</label><input type="number" step="0.01" class="form-control" name="minRate" [(ngModel)]="request.minRate" min="0" required></div>
+      <div class="form-group"><label class="form-label">Maximum Rate (%)</label><input type="number" step="0.01" class="form-control" name="maxRate" [(ngModel)]="request.maxRate" min="0" required></div>
+      <div class="form-group"><label class="form-label">Maximum Category Add-on (%)</label><input type="number" step="0.01" class="form-control" name="rateCap" [(ngModel)]="request.rateCapAddon" min="0"></div>
+      <div class="form-group"><label class="form-label">Minimum Deposit</label><input type="number" step="0.001" class="form-control" name="minDeposit" [(ngModel)]="request.minDeposit" min="0.001" required></div>
+      <div class="form-group"><label class="form-label">Maximum Deposit</label><input type="number" step="0.001" class="form-control" name="maxDeposit" [(ngModel)]="request.maxDeposit" min="0.001"></div>
+      <div class="form-group"><label class="form-label">Premature Penalty (%)</label><input type="number" step="0.01" class="form-control" name="penalty" [(ngModel)]="request.preMaturityPenaltyPct" min="0"></div>
+    </div>
+
+    <div class="option-section">
+      <label class="form-label">Allowed Capitalization Frequencies</label>
+      <label class="option" *ngFor="let value of compoundingOptions"><input type="checkbox" [checked]="selected('allowedCompoundingFrequencies', value)" (change)="toggleOption('allowedCompoundingFrequencies', value)"> {{ value.replace('_', ' ') }}</label>
+    </div>
+    <div class="form-group max-field"><label class="form-label">Default Capitalization</label><select class="form-control" name="defaultCompounding" [(ngModel)]="request.compoundingFrequency" required><option *ngFor="let value of request.allowedCompoundingFrequencies" [value]="value">{{ value.replace('_', ' ') }}</option></select></div>
+
+    <div class="option-section">
+      <label class="form-label">Allowed Interest Payout Frequencies</label>
+      <label class="option" *ngFor="let value of payoutOptions"><input type="checkbox" [checked]="selected('allowedPayoutFrequencies', value)" (change)="toggleOption('allowedPayoutFrequencies', value)"> {{ value.replace('_', ' ') }}</label>
+    </div>
+
+    <div class="flex justify-between items-center mt-4">
+      <label class="option"><input type="checkbox" name="prematureAllowed" [(ngModel)]="request.prematureClosureAllowed"> Premature closure allowed</label>
+      <span class="text-muted">Day count: ACTUAL/365</span>
+      <button class="btn btn-primary" type="submit" [disabled]="!productForm.valid || loading || request.allowedCompoundingFrequencies.length === 0 || request.allowedPayoutFrequencies.length === 0">{{ loading ? 'Saving...' : 'Save Product' }}</button>
+    </div>
+  </form>
+
+  <div class="glass-card">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Code</th><th>Name</th><th>Currency</th><th>Rate Range</th><th>Deposit Range</th><th>Tenure</th><th>Capitalization Options</th><th>Payout Options</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let product of products">
+            <td><strong>{{ product.productCode }}</strong></td><td>{{ product.productName }}</td><td>{{ product.currency }}</td>
+            <td>{{ product.minRate }}–{{ product.maxRate }}%</td><td>{{ product.minDeposit }}–{{ product.maxDeposit || 'No cap' }}</td><td>{{ product.minTermMonths }}–{{ product.maxTermMonths }} mo</td>
+            <td>{{ product.allowedCompoundingFrequencies.join(', ') }}</td><td>{{ product.allowedPayoutFrequencies.join(', ') }}</td><td><span class="badge badge-active">{{ product.status || 'ACTIVE' }}</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="text-center p-4 text-muted" *ngIf="!loading && products.length === 0">No products configured.</div>
+  </div>
+</div>

@@ -99,4 +99,36 @@ public class ReportServiceImpl implements ReportService {
         }
         return out.toByteArray();
     }
+
+    @Override
+    public byte[] exportCustomerPortfolioCsv(String customerId) {
+        List<FdPortfolioReport> portfolio = getCustomerPortfolio(customerId);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (PrintWriter writer = new PrintWriter(out)) {
+            writer.println("FD Account,Product Code,Principal,Interest Rate,Tenure Months,Status,Maturity Date,Accrued Interest,Projected Maturity Amount");
+            for (FdPortfolioReport row : portfolio) {
+                writer.printf("%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
+                        csv(row.getFdAccountNo()),
+                        csv(row.getProductCode()),
+                        row.getPrincipalAmount(),
+                        row.getInterestRate(),
+                        row.getTenureMonths(),
+                        csv(row.getStatus()),
+                        row.getMaturityDate(),
+                        row.getAccruedInterest(),
+                        row.getProjectedMaturityAmount());
+            }
+            writer.flush();
+        }
+        return out.toByteArray();
+    }
+
+    private String csv(Object value) {
+        if (value == null) return "";
+        String text = value.toString();
+        if (text.contains(",") || text.contains("\"") || text.contains("\n")) {
+            return "\"" + text.replace("\"", "\"\"") + "\"";
+        }
+        return text;
+    }
 }

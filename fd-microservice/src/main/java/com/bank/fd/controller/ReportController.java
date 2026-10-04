@@ -41,6 +41,19 @@ public class ReportController {
         return ResponseEntity.ok(reportService.getCustomerPortfolio(customerId));
     }
 
+    @GetMapping("/customer-portfolio/export/csv")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<byte[]> exportCustomerPortfolioCsv(Authentication authentication) {
+        String customerId = customerId(authentication);
+        if (customerId == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=fd_portfolio.csv")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(reportService.exportCustomerPortfolioCsv(customerId));
+    }
+
     @GetMapping("/customer-portfolio/{customerId}")
     @PreAuthorize("hasRole('BANK_OFFICER') or hasRole('ADMIN')")
     public ResponseEntity<List<FdPortfolioReport>> getCustomerPortfolioForOfficer(@PathVariable String customerId) {
@@ -55,5 +68,13 @@ public class ReportController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=fd_summary_report.csv")
                 .contentType(MediaType.parseMediaType("text/csv"))
                 .body(csvData);
+    }
+
+    private String customerId(Authentication authentication) {
+        if (authentication == null || authentication.getCredentials() == null) {
+            return null;
+        }
+        String customerId = authentication.getCredentials().toString();
+        return customerId.isBlank() ? null : customerId;
     }
 }

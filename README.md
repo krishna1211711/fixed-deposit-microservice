@@ -50,7 +50,7 @@ Demo users all use password `admin123`:
 
 | Username | Role | Main demonstration |
 |---|---|---|
-| `admin` | ADMIN | Products, batches, time travel, reports |
+| `admin` | ADMIN | Product management, batches, time travel, reports |
 | `officer1` | BANK_OFFICER | Open an FD and view portfolios |
 | `johndoe` | CUSTOMER | View `CUST001`, statements, and withdraw |
 
@@ -62,6 +62,7 @@ Stop the stack with `docker compose down`. Add `-v` only when you intentionally 
 - Simple and compound-interest simulation, idempotent daily accrual and statements, maturity processing, and manual batch triggers
 - Premature-withdrawal penalty calculation with withdrawal and penalty ledger entries
 - ADMIN, BANK_OFFICER, and CUSTOMER authorization boundaries
+- Protected Angular product-management screen for product limits, currencies, rates, frequencies, penalties, and premature-closure policy
 - JSON and CSV reports in Spring plus CSV, PDF, and chart exports in the Python report service
 - Versioned Kafka lifecycle events, transactional outbox relay, consumer inbox, retry/DLQ handling, and local Mailpit delivery
 - Single distributed claim per scheduled job/business date, plus account-level duplicate protection
@@ -83,6 +84,7 @@ Stop the stack with `docker compose down`. Add `-v` only when you intentionally 
 | Manual maturity close | `POST /api/fd/account/manual-close` |
 | Batch controls | `POST /api/admin/batch/*` |
 | Reports | `GET /api/report/*` and `GET /reports/*` through the gateway |
+| Customer portfolio CSV | `GET /api/report/customer-portfolio/export/csv` |
 
 The canonical HTTP specification is [fd_module_openapi.yaml](fd_module_openapi.yaml), the event specification is [docs/fd-lifecycle-asyncapi.yaml](docs/fd-lifecycle-asyncapi.yaml), and the service-owned database model is [fd-microservice/DATABASE_ER_DIAGRAM.md](fd-microservice/DATABASE_ER_DIAGRAM.md).
 

@@ -24,7 +24,7 @@ public class FdCalculatorCompatibilityController {
     }
 
     @PostMapping("/api/fd/calculate")
-    @PreAuthorize("hasRole('CUSTOMER')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<FdCalculateResponse> calculate(@Valid @RequestBody FdCalculateRequest request) {
         return ResponseEntity.ok(calculatorService.calculate(request));
     }

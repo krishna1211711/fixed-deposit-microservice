@@ -24,7 +24,15 @@ export class ProductService {
     return this.http.get<Product>(`${this.apiUrl}/${code}`);
   }
 
-  createProduct(request: any): Observable<Product> {
-    return this.http.post<Product>(this.apiUrl, request);
+  getAllProducts(): Observable<Product[]> {
+    return this.http.get<Product[]>(`${this.apiUrl}/all`);
+  }
+
+  createProduct(request: any): Observable<any> {
+    return this.http.post<any>(this.apiUrl, request);
+  }
+
+  updateProduct(code: string, request: any): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/${code}`, request);
   }
 }

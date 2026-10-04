@@ -62,7 +62,7 @@ export class ReportsComponent implements OnInit {
   }
 
   exportCsv() {
-    this.reportService.exportCsv().subscribe((blob) => {
+    this.reportService.exportCsv(this.authService.isCustomer()).subscribe((blob) => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

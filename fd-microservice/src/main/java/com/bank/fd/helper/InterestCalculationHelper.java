@@ -65,8 +65,10 @@ public class InterestCalculationHelper {
         for (String category : categories) {
             if ("SENIOR_CITIZEN".equalsIgnoreCase(category)) {
                 totalAddon = totalAddon.add(new BigDecimal("0.50"));
-            } else if ("STAFF".equalsIgnoreCase(category)) {
+            } else if ("STAFF".equalsIgnoreCase(category) || "BANK_EMPLOYEE".equalsIgnoreCase(category)) {
                 totalAddon = totalAddon.add(new BigDecimal("1.00"));
+            } else if ("PREMIUM_CUSTOMER".equalsIgnoreCase(category)) {
+                totalAddon = totalAddon.add(new BigDecimal("0.25"));
             }
         }
         if (rateCapAddon != null && totalAddon.compareTo(rateCapAddon) > 0) {

@@ -8,4 +8,5 @@ public interface ReportService {
     List<FdSummaryReport> getFdSummary();
     List<FdPortfolioReport> getCustomerPortfolio(String customerId);
     byte[] exportCsv();
+    byte[] exportCustomerPortfolioCsv(String customerId);
 }

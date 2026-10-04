@@ -15,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -82,5 +83,29 @@ class ReportServiceTest {
         String csvContent = new String(csv);
         assertTrue(csvContent.contains("Product Code,Product Name"));
         assertTrue(csvContent.contains("FD_STD,Standard FD"));
+    }
+
+    @Test
+    void exportsOnlyTheRequestedCustomerPortfolio() {
+        FdAccount account = new FdAccount();
+        when(accountRepository.findByCustomerId("CUST001")).thenReturn(List.of(account));
+
+        FdPortfolioReport row = new FdPortfolioReport();
+        row.setFdAccountNo("0010000001");
+        row.setProductCode("FD_STD");
+        row.setPrincipalAmount(new BigDecimal("100000.00"));
+        row.setInterestRate(new BigDecimal("6.50"));
+        row.setTenureMonths(12);
+        row.setStatus("ACTIVE");
+        row.setMaturityDate(LocalDate.of(2027, 10, 4));
+        row.setAccruedInterest(new BigDecimal("13.698630"));
+        row.setProjectedMaturityAmount(new BigDecimal("106500.00"));
+        when(accountMapper.toPortfolioReport(account)).thenReturn(row);
+
+        String csv = new String(reportService.exportCustomerPortfolioCsv("CUST001"));
+
+        assertTrue(csv.contains("FD Account,Product Code,Principal"));
+        assertTrue(csv.contains("0010000001,FD_STD,100000.00,6.50,12,ACTIVE"));
+        verify(accountRepository).findByCustomerId("CUST001");
     }
 }

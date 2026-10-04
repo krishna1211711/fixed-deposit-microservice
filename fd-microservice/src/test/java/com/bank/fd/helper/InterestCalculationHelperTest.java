@@ -77,6 +77,11 @@ class InterestCalculationHelperTest {
         BigDecimal staffRate = helper.applyCategoryAddons(baseRate, List.of("STAFF"), new BigDecimal("2.00"));
         assertEquals(new BigDecimal("7.50"), staffRate);
 
+        assertEquals(new BigDecimal("7.50"), helper.applyCategoryAddons(
+                baseRate, List.of("BANK_EMPLOYEE"), new BigDecimal("2.00")));
+        assertEquals(new BigDecimal("6.75"), helper.applyCategoryAddons(
+                baseRate, List.of("PREMIUM_CUSTOMER"), new BigDecimal("2.00")));
+
         // Both Staff + Senior Citizen (+1.50)
         BigDecimal combinedRate = helper.applyCategoryAddons(baseRate, List.of("STAFF", "SENIOR_CITIZEN"), new BigDecimal("2.00"));
         assertEquals(new BigDecimal("8.00"), combinedRate);

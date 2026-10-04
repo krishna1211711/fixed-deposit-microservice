@@ -41,7 +41,8 @@ export const routes: Routes = [
   { 
     path: 'fd/:fdAccountNo/withdraw', 
     loadComponent: () => import('./features/fd-account/withdraw/fd-withdraw.component').then(m => m.FdWithdrawComponent),
-    canActivate: [authGuard]
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['CUSTOMER', 'BANK_OFFICER'] }
   },
   { 
     path: 'statements/:fdAccountNo', 
@@ -57,6 +58,12 @@ export const routes: Routes = [
   { 
     path: 'admin/time-travel', 
     loadComponent: () => import('./features/admin/time-travel/time-travel.component').then(m => m.TimeTravelComponent),
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['ADMIN'] }
+  },
+  {
+    path: 'admin/products',
+    loadComponent: () => import('./features/admin/product-management/product-management.component').then(m => m.ProductManagementComponent),
     canActivate: [authGuard, roleGuard],
     data: { roles: ['ADMIN'] }
   },
