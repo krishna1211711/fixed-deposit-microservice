@@ -58,18 +58,25 @@ public class InterestCalculationHelper {
     }
 
     public BigDecimal applyCategoryAddons(BigDecimal baseRate, List<String> categories, BigDecimal rateCapAddon) {
+        return applyCategoryAddons(baseRate, categories, rateCapAddon, true);
+    }
+
+    public BigDecimal applyCategoryAddons(BigDecimal baseRate, List<String> categories,
+                                          BigDecimal rateCapAddon, boolean stackable) {
         if (categories == null || categories.isEmpty()) {
             return baseRate;
         }
         BigDecimal totalAddon = BigDecimal.ZERO;
         for (String category : categories) {
+            BigDecimal addon = BigDecimal.ZERO;
             if ("SENIOR_CITIZEN".equalsIgnoreCase(category)) {
-                totalAddon = totalAddon.add(new BigDecimal("0.50"));
+                addon = new BigDecimal("0.50");
             } else if ("STAFF".equalsIgnoreCase(category) || "BANK_EMPLOYEE".equalsIgnoreCase(category)) {
-                totalAddon = totalAddon.add(new BigDecimal("1.00"));
+                addon = new BigDecimal("1.00");
             } else if ("PREMIUM_CUSTOMER".equalsIgnoreCase(category)) {
-                totalAddon = totalAddon.add(new BigDecimal("0.25"));
+                addon = new BigDecimal("0.25");
             }
+            totalAddon = stackable ? totalAddon.add(addon) : totalAddon.max(addon);
         }
         if (rateCapAddon != null && totalAddon.compareTo(rateCapAddon) > 0) {
             totalAddon = rateCapAddon;

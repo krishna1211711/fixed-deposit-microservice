@@ -3,11 +3,14 @@ export interface User {
   username: string;
   email: string;
   roles: string[];
+  customerId?: string;
 }
 
 export interface FdAccount {
   fdAccountNo: string;
   customerId: string;
+  customerName?: string;
+  customerCategory?: string;
   productCode: string;
   principalAmount: number;
   currentBalance: number;
@@ -28,6 +31,16 @@ export interface FdAccount {
   lastPayoutDate?: string;
   nextPayoutDate?: string;
   renewalAccountNo?: string;
+  prematureClosureAllowed?: boolean;
+  prematureClosurePenaltyPct?: number;
+  closureDate?: string;
+  closureType?: 'MATURITY' | 'PREMATURE' | 'RENEWAL';
+  closureReason?: string;
+  closureGrossInterest?: number;
+  closurePenaltyAmount?: number;
+  closureNetPayout?: number;
+  closureTransferAccountMasked?: string;
+  closedBy?: string;
 }
 
 export interface Product {
@@ -50,6 +63,37 @@ export interface Product {
   allowedPayoutFrequencies: Array<'MONTHLY' | 'QUARTERLY' | 'HALF_YEARLY' | 'YEARLY' | 'MATURITY'>;
   dayCountConvention: string;
   prematureClosureAllowed: boolean;
+  categoryAddonsStackable: boolean;
+}
+
+export interface FdOpeningRequest {
+  requestId: string;
+  requesterUsername: string;
+  requesterRole: string;
+  customerId: string;
+  customerName: string;
+  productCode: string;
+  principalAmount: number;
+  currency: string;
+  status: 'PENDING_CHECKER' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+  checkerUsername?: string;
+  decisionReason?: string;
+  fdAccountNo?: string;
+  createdAt: string;
+  decidedAt?: string;
+}
+
+export interface AuditLog {
+  auditId: string;
+  occurredAt: string;
+  actorUsername: string;
+  actorRole: string;
+  action: string;
+  entityType: string;
+  entityId?: string;
+  outcome: string;
+  correlationId?: string;
+  detailsJson?: string;
 }
 
 export interface Transaction {

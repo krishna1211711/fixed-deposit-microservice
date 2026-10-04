@@ -7,8 +7,8 @@
 openapi: 3.0.3
 info:
   title: Fixed Deposit (FD) Microservice - FD Account Module API
-  description: Official OpenAPI 3.0 Specification strictly for the Core Fixed Deposit (FD) Account Module. Covers account creation, portfolio management, transaction history, statement retrieval, premature withdrawal, and manual closure.
-  version: 1.0.0
+  description: Official OpenAPI 3.0 specification for the FD bounded context. Human users submit maker requests and a distinct CHECKER authorizes them; the direct creation command is internal-only.
+  version: 1.1.0
 servers:
   - url: http://localhost:8080/api/fd
     description: Direct Microservice Base URL
@@ -19,6 +19,96 @@ security:
   - BearerAuth: []
 
 paths:
+  /opening-requests:
+    post:
+      summary: Submit an FD opening request
+      description: CUSTOMER may submit only for the customerId in the JWT; BANK_OFFICER acts as maker. This does not create an FD until a different CHECKER approves it. Eligibility categories come from the customer profile and cannot be selected by the caller.
+      operationId: submitFdOpeningRequest
+      tags: [FD Opening Workflow]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 8, maxLength: 80, pattern: '^[A-Za-z0-9._:-]+$' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FdAccountCreateRequest' }
+      responses:
+        '200':
+          description: Pending request (or the existing idempotent result)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FdOpeningRequestResponse' }
+        '409': { $ref: '#/components/responses/400BadRequest' }
+
+  /opening-requests/mine:
+    get:
+      summary: List opening requests submitted by the current customer or maker
+      tags: [FD Opening Workflow]
+      responses:
+        '200':
+          description: Request history
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/FdOpeningRequestResponse' } }
+
+  /opening-requests/pending:
+    get:
+      summary: List requests awaiting checker action
+      description: CHECKER only.
+      tags: [FD Opening Workflow]
+      responses:
+        '200':
+          description: Pending requests
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/FdOpeningRequestResponse' } }
+
+  /opening-requests/{requestId}/approve:
+    post:
+      summary: Approve and atomically open the FD
+      description: CHECKER only. Maker and checker usernames must differ; a repeated decision cannot create a second FD.
+      tags: [FD Opening Workflow]
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApprovalDecisionRequest' }
+      responses:
+        '200':
+          description: Approved request including generated fdAccountNo
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FdOpeningRequestResponse' }
+
+  /opening-requests/{requestId}/reject:
+    post:
+      summary: Reject an FD opening request
+      description: CHECKER only; rejection reason is mandatory.
+      tags: [FD Opening Workflow]
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApprovalDecisionRequest' }
+      responses:
+        '200':
+          description: Rejected request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FdOpeningRequestResponse' }
+
   /calculate:
     post:
       summary: Calculate an FD maturity projection
@@ -61,8 +151,8 @@ paths:
 
   /account/create:
     post:
-      summary: Create FD Account & Post Initial Deposit Transaction
-      description: Validates booked product terms, creates the account, initial DEPOSIT transaction, and FD_OPENED outbox event in one database transaction. Replaying the same Idempotency-Key and body returns the stored response; using the key with a different body returns 409.
+      summary: Internal system command to create the approved FD
+      description: ROLE_SYSTEM only. Human CUSTOMER, BANK_OFFICER, CHECKER and ADMIN callers must use the opening-request workflow. Creates the account, initial DEPOSIT and FD_OPENED outbox event atomically.
       operationId: createFdAccount
       tags:
         - FD Account Lifecycle
@@ -89,8 +179,6 @@ paths:
               termMonths: 12
               branchCode: "001"
               currency: "INR"
-              categories:
-                - "SENIOR_CITIZEN"
       responses:
         '200':
           description: FD Account created successfully
@@ -416,9 +504,10 @@ components:
           enum: [INR, USD, EUR, GBP, JPY, AED, KWD]
         categories:
           type: array
+          readOnly: true
           items:
             type: string
-          description: Applicable customer category adjustments (SENIOR_CITIZEN, BANK_EMPLOYEE, PREMIUM_CUSTOMER)
+          description: Verified customer-profile eligibility copied by the server; caller values are ignored.
         compoundingFrequency:
           type: string
           enum: [MONTHLY, QUARTERLY, HALF_YEARLY, YEARLY]
@@ -442,6 +531,11 @@ components:
           type: string
           description: Generated 10-digit account number (Branch + Seq + Checksum)
         customerId:
+          type: string
+        customerName:
+          type: string
+          description: Owner name snapshot captured when the FD is booked
+        customerCategory:
           type: string
         productCode:
           type: string
@@ -597,6 +691,14 @@ components:
         accruedInterest:
           type: number
           format: double
+        closureDate: { type: string, format: date, nullable: true }
+        closureType: { type: string, enum: [PREMATURE, MATURITY_PAYOUT, MATURITY_RENEWAL], nullable: true }
+        closureReason: { type: string, nullable: true }
+        closureGrossInterest: { type: number, nullable: true }
+        closurePenaltyAmount: { type: number, nullable: true }
+        closureNetPayout: { type: number, nullable: true }
+        closureTransferAccountMasked: { type: string, nullable: true }
+        closedBy: { type: string, nullable: true }
         closingBalance:
           type: number
           format: double
@@ -608,6 +710,29 @@ components:
           type: boolean
         message:
           type: string
+
+    ApprovalDecisionRequest:
+      type: object
+      properties:
+        reason: { type: string, maxLength: 500 }
+
+    FdOpeningRequestResponse:
+      type: object
+      properties:
+        requestId: { type: string, format: uuid }
+        requesterUsername: { type: string }
+        requesterRole: { type: string, enum: [CUSTOMER, BANK_OFFICER] }
+        customerId: { type: string }
+        customerName: { type: string }
+        productCode: { type: string }
+        principalAmount: { type: number }
+        currency: { type: string }
+        status: { type: string, enum: [PENDING_CHECKER, APPROVED, REJECTED, CANCELLED] }
+        checkerUsername: { type: string, nullable: true }
+        decisionReason: { type: string, nullable: true }
+        fdAccountNo: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        decidedAt: { type: string, format: date-time, nullable: true }
         data:
           type: object
         timestamp:

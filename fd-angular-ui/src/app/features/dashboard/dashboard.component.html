@@ -4,13 +4,15 @@
       <h2>{{ 'dashboard.welcome' | translate:{name: authService.getUsername()} }}</h2>
       <p class="role-text">{{ authService.getRole() }}</p>
     </div>
-    <div class="banner-actions" *ngIf="authService.isAdmin() || authService.isOfficer()">
-      <a routerLink="/fd/create" class="btn btn-primary">{{ 'nav.createFd' | translate }}</a>
+    <div class="banner-actions">
+      <a routerLink="/fd/create" class="btn btn-primary" *ngIf="authService.isCustomer() || authService.isOfficer()">Submit FD Request</a>
+      <a routerLink="/checker/opening-requests" class="btn btn-primary" *ngIf="authService.isChecker()">Review Pending Requests</a>
+      <a routerLink="/audit" class="btn btn-primary" *ngIf="authService.isAuditor()">Review Audit Trail</a>
       <a routerLink="/admin/batch" class="btn btn-accent" *ngIf="authService.isAdmin()">{{ 'nav.batchControl' | translate }}</a>
     </div>
   </div>
 
-  <div class="stats-grid grid grid-cols-4 mb-4" *ngIf="!loading">
+  <div class="stats-grid grid grid-cols-4 mb-4" *ngIf="!loading && !authService.isChecker() && !authService.isAuditor()">
     <div class="stat-card glass-card">
       <div class="stat-icon bg-primary-light">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
@@ -62,7 +64,7 @@
     </div>
   </div>
 
-  <div class="glass-card animate-slide-up">
+  <div class="glass-card animate-slide-up" *ngIf="!authService.isChecker() && !authService.isAuditor()">
     <div class="flex justify-between items-center mb-4">
       <h3>{{ 'dashboard.recentFds' | translate }}</h3>
       <a routerLink="/fd/list" class="btn btn-outline">{{ 'nav.allFds' | translate }}</a>
@@ -104,5 +106,10 @@
     <div class="text-center p-4" *ngIf="loading">
       <div class="animate-pulse">{{ 'common.loading' | translate }}</div>
     </div>
+  </div>
+
+  <div class="glass-card text-center p-4" *ngIf="authService.isChecker() || authService.isAuditor()">
+    <h3>{{ authService.isChecker() ? 'Checker workspace' : 'Audit workspace' }}</h3>
+    <p class="text-muted">Use the role-specific action above. This role cannot browse or create deposits outside its assigned responsibility.</p>
   </div>
 </div>

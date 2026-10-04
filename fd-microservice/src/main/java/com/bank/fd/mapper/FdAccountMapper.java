@@ -22,6 +22,8 @@ public class FdAccountMapper {
         FdAccountResponse res = new FdAccountResponse();
         res.setFdAccountNo(account.getFdAccountNo());
         res.setCustomerId(account.getCustomerId());
+        res.setCustomerName(account.getCustomerNameSnapshot());
+        res.setCustomerCategory(account.getCustomerCategorySnapshot());
         res.setProductCode(account.getProductCode());
         res.setCurrency(account.getCurrency());
         res.setPrincipalAmount(account.getPrincipalAmount());
@@ -45,6 +47,14 @@ public class FdAccountMapper {
         res.setPrematureClosureAllowed(account.getPrematureClosureAllowed());
         res.setPrematureClosurePenaltyPct(account.getPrematureClosurePenaltyPct());
         res.setMaturityProcessedAt(account.getMaturityProcessedAt());
+        res.setClosureDate(account.getClosureDate());
+        res.setClosureType(account.getClosureType());
+        res.setClosureReason(account.getClosureReason());
+        res.setClosureGrossInterest(account.getClosureGrossInterest());
+        res.setClosurePenaltyAmount(account.getClosurePenaltyAmount());
+        res.setClosureNetPayout(account.getClosureNetPayout());
+        res.setClosureTransferAccountMasked(account.getClosureTransferAccountMasked());
+        res.setClosedBy(account.getClosedBy());
         res.setRenewalAccountNo(account.getRenewalAccountNo());
         res.setCreatedAt(account.getCreatedAt());
         res.setCreatedBy(account.getCreatedBy());

@@ -11,15 +11,16 @@
 
 1. Show the architecture diagram and container list.
 2. Log in as `johndoe` with `admin123` and run the authenticated FD calculator.
-3. Log in as `officer1` with `admin123`.
-4. Create an INR FD for `CUST001`; point out the generated account number, initial deposit transaction, Kafka event, and captured opening email.
-5. Open the account and show its transaction history.
-6. Log in as `admin`; trigger interest accrual and statement generation.
+3. Log in as `officer1` with `admin123` and submit an INR FD request for `CUST001`. Point out that no account exists yet.
+4. Log in as `checker1` with `admin123`; approve the request and show the generated account, initial deposit, Kafka events, and captured email.
+5. Open the account and show owner snapshot, booked terms, transaction history and lifecycle state.
+6. Log in as `admin`; show that Create FD is absent, then trigger interest accrual and statement generation twice to demonstrate the duplicate guard.
 7. Open Product Management and explain that products control limits, rates, allowed capitalization/payout frequencies, and premature-closure policy while active FDs retain booked terms.
 8. Open the customer statement, notification-service health, and captured emails in Mailpit.
-9. Use time travel or the premature-withdrawal flow to demonstrate a lifecycle transition and penalty entry. Single-operation time travel executes only the selected operation.
-10. Open reports and download the role-appropriate customer portfolio or staff summary CSV.
-11. End with the Kubernetes manifests, health probes, and service boundaries that support later scaling.
+9. Explain that Time Travel is explicitly local test/simulation functionality, then use it or premature withdrawal to show closure date/type, penalty, net payout and the preserved contractual maturity date.
+10. Open reports and show active versus closed/matured sections; download the role-appropriate CSV.
+11. Log in as `auditor1` and show maker/checker, batch and closure audit records.
+12. End with the Kubernetes manifests, health probes, Kafka/outbox flow, and service boundaries that support later scaling.
 
 ## Recovery
 

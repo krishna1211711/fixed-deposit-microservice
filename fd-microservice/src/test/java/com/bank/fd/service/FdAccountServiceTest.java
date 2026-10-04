@@ -5,6 +5,7 @@ import com.bank.fd.dto.response.FdAccountResponse;
 import com.bank.fd.entity.FdAccount;
 import com.bank.fd.entity.FdTransaction;
 import com.bank.fd.entity.Product;
+import com.bank.fd.entity.CustomerProfile;
 import com.bank.fd.event.EventPublisher;
 import com.bank.fd.helper.AccountNumberGenerator;
 import com.bank.fd.helper.InterestCalculationHelper;
@@ -12,6 +13,7 @@ import com.bank.fd.mapper.FdAccountMapper;
 import com.bank.fd.repository.FdAccountRepository;
 import com.bank.fd.repository.FdStatementRepository;
 import com.bank.fd.repository.FdTransactionRepository;
+import com.bank.fd.repository.CustomerProfileRepository;
 import com.bank.fd.service.impl.FdAccountServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,6 +53,8 @@ class FdAccountServiceTest {
     private FdAccountMapper accountMapper;
     @Mock
     private EventPublisher eventPublisher;
+    @Mock
+    private CustomerProfileRepository customerProfileRepository;
 
     @InjectMocks
     private FdAccountServiceImpl accountService;
@@ -81,8 +85,13 @@ class FdAccountServiceTest {
         request.setCategories(List.of("STAFF", "SENIOR_CITIZEN"));
 
         when(productService.validateProductForFd("FD_STD", 12, new BigDecimal("50000.00"))).thenReturn(testProduct);
+        CustomerProfile customer = new CustomerProfile();
+        customer.setCustomerId("CUST001");
+        customer.setFullName("Test Customer");
+        customer.setCategory("STAFF,SENIOR_CITIZEN");
+        when(customerProfileRepository.findByCustomerId("CUST001")).thenReturn(Optional.of(customer));
         // Base rate 6.00 + addon 1.50 = 7.50, but maxRate is 7.00 -> should be capped at 7.00
-        when(interestCalculationHelper.applyCategoryAddons(eq(new BigDecimal("6.00")), any(), eq(new BigDecimal("1.50"))))
+        when(interestCalculationHelper.applyCategoryAddons(eq(new BigDecimal("6.00")), any(), eq(new BigDecimal("1.50")), eq(true)))
                 .thenReturn(new BigDecimal("7.50"));
         when(accountNumberGenerator.generate("001")).thenReturn("FD001000001");
 

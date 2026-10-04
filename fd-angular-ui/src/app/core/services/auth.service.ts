@@ -57,7 +57,8 @@ export class AuthService {
         const user: User = {
           username: decoded.sub,
           email: decoded.email || '',
-          roles: rawRoles.map((role: string) => role.replace(/^ROLE_/, ''))
+          roles: rawRoles.map((role: string) => role.replace(/^ROLE_/, '')),
+          customerId: decoded.customerId
         };
         this.currentUserSubject.next(user);
       } catch (e) {
@@ -78,6 +79,10 @@ export class AuthService {
     return this.currentUserSubject.value?.username || '';
   }
 
+  getCustomerId(): string {
+    return this.currentUserSubject.value?.customerId || '';
+  }
+
   isAdmin(): boolean {
     return this.getRole() === 'ADMIN';
   }
@@ -88,5 +93,14 @@ export class AuthService {
 
   isCustomer(): boolean {
     return this.getRole() === 'CUSTOMER';
+  }
+
+
+  isChecker(): boolean {
+    return this.getRole() === 'CHECKER';
+  }
+
+  isAuditor(): boolean {
+    return this.getRole() === 'AUDITOR';
   }
 }

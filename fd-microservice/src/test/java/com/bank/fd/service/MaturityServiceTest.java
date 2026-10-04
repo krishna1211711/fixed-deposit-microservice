@@ -45,6 +45,8 @@ class MaturityServiceTest {
     private FdTransactionRepository transactionRepository;
     @Mock
     private AccountNumberGenerator accountNumberGenerator;
+    @Mock
+    private AuditTrailService auditTrail;
 
     @InjectMocks
     private MaturityServiceImpl maturityService;

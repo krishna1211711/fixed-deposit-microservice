@@ -10,12 +10,13 @@ This repository is the independently deployable Fixed Deposit bounded context, n
 - Transactional outbox publishing versioned FD lifecycle events to Kafka.
 - Independent notification service with its own MySQL database and Mailpit delivery.
 - Independent report service that calls authenticated FD APIs and never queries FD tables.
-- CUSTOMER, BANK_OFFICER and ADMIN roles.
+- CUSTOMER, BANK_OFFICER/Maker, CHECKER, ADMIN and AUDITOR roles.
 - Product administration, multi-currency rules, ACTUAL/365 daily accrual, scheduled capitalization and payout, maturity instructions, renewal, premature closure and idempotency.
+- In-module maker-checker opening, lifecycle/closure metadata, owner snapshots and an append-only operational audit trail. These remain inside the FD bounded context and do not introduce cross-service joins or foreign keys.
 
 ## What must not be claimed as implemented
 
-The following are wider core-banking integrations or future services: external KYC, real savings-account debit, central GL posting, checker/branch-manager approval, immutable enterprise audit, BOD/EOD orchestration, reconciliation, tax/TDS, transaction reversal, SMS/WhatsApp and event sourcing.
+The following are wider core-banking integrations or future services: external KYC, real savings-account debit, central GL posting, branch-manager/high-value approval, a bank-wide enterprise audit service, BOD/EOD orchestration, reconciliation, tax/TDS, transaction reversal, SMS/WhatsApp and event sourcing.
 
 The local Time Travel utility processes the FD lifecycle forward through a chosen business date. It is not historical reconstruction and is not event sourcing.
 
@@ -37,11 +38,11 @@ Workflow Service --------- approval result events -----------------+
 
 ## Recommended future sequence
 
-1. Add a separate maker-checker workflow capability with BANK_OFFICER as maker and a distinct CHECKER identity.
+1. Extract the existing in-module approval port to the team's Workflow Service when its versioned API/event contract is available.
 2. Integrate with the owning team's Customer/KYC API; do not duplicate their customer tables.
 3. Integrate with Account Service using an idempotent debit command and debit-result event before FD activation.
 4. Publish accounting commands to a central GL service while retaining the FD transaction reference.
-5. Add audit and reconciliation consumers without changing the FD transaction boundary.
+5. Stream the existing lifecycle/outbox events to enterprise audit and reconciliation consumers without database access.
 6. Add tax and reversal workflows only after the owning services and contracts are agreed across teams.
 
 This preserves the current working module while giving each future capability a clean extraction and integration path.

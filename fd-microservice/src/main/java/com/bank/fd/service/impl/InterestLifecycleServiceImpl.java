@@ -1,6 +1,7 @@
 package com.bank.fd.service.impl;
 
 import com.bank.fd.entity.FdAccount;
+import com.bank.fd.domain.FdLifecycleStatus;
 import com.bank.fd.entity.FdInterestTransaction;
 import com.bank.fd.event.EventPublisher;
 import com.bank.fd.helper.CurrencyRules;
@@ -43,7 +44,7 @@ public class InterestLifecycleServiceImpl implements InterestLifecycleService {
     @Transactional
     public void processAccountThroughDate(String fdAccountNo, LocalDate throughDate) {
         FdAccount account = accountRepository.findByIdForUpdate(fdAccountNo).orElse(null);
-        if (account == null || !"ACTIVE".equals(account.getStatus())) return;
+        if (account == null || !FdLifecycleStatus.ACTIVE.name().equals(account.getStatus())) return;
 
         LocalDate endDate = throughDate.isAfter(account.getMaturityDate())
                 ? account.getMaturityDate() : throughDate;

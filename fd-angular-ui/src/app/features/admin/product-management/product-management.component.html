@@ -42,6 +42,7 @@
 
     <div class="flex justify-between items-center mt-4">
       <label class="option"><input type="checkbox" name="prematureAllowed" [(ngModel)]="request.prematureClosureAllowed"> Premature closure allowed</label>
+      <label class="option"><input type="checkbox" name="addonsStackable" [(ngModel)]="request.categoryAddonsStackable"> Category add-ons are stackable</label>
       <span class="text-muted">Day count: ACTUAL/365</span>
       <button class="btn btn-primary" type="submit" [disabled]="!productForm.valid || loading || request.allowedCompoundingFrequencies.length === 0 || request.allowedPayoutFrequencies.length === 0">{{ loading ? 'Saving...' : 'Save Product' }}</button>
     </div>
@@ -50,11 +51,11 @@
   <div class="glass-card">
     <div class="table-responsive">
       <table class="table">
-        <thead><tr><th>Code</th><th>Name</th><th>Currency</th><th>Rate Range</th><th>Deposit Range</th><th>Tenure</th><th>Capitalization Options</th><th>Payout Options</th><th>Status</th></tr></thead>
+        <thead><tr><th>Code</th><th>Name</th><th>Currency</th><th>Rate Range</th><th>Category Add-ons</th><th>Deposit Range</th><th>Tenure</th><th>Capitalization Options</th><th>Payout Options</th><th>Status</th></tr></thead>
         <tbody>
           <tr *ngFor="let product of products">
             <td><strong>{{ product.productCode }}</strong></td><td>{{ product.productName }}</td><td>{{ product.currency }}</td>
-            <td>{{ product.minRate }}–{{ product.maxRate }}%</td><td>{{ product.minDeposit }}–{{ product.maxDeposit || 'No cap' }}</td><td>{{ product.minTermMonths }}–{{ product.maxTermMonths }} mo</td>
+            <td>{{ product.minRate }}–{{ product.maxRate }}%</td><td>{{ product.categoryAddonsStackable ? 'Stack and cap' : 'Highest only' }}</td><td>{{ product.minDeposit }}–{{ product.maxDeposit || 'No cap' }}</td><td>{{ product.minTermMonths }}–{{ product.maxTermMonths }} mo</td>
             <td>{{ product.allowedCompoundingFrequencies.join(', ') }}</td><td>{{ product.allowedPayoutFrequencies.join(', ') }}</td><td><span class="badge badge-active">{{ product.status || 'ACTIVE' }}</span></td>
           </tr>
         </tbody>

@@ -1,6 +1,7 @@
 package com.bank.fd.service.impl;
 
 import com.bank.fd.dto.response.ApiResponse;
+import com.bank.fd.domain.FdLifecycleStatus;
 import com.bank.fd.entity.FdAccount;
 import com.bank.fd.entity.FdStatement;
 import com.bank.fd.event.EventPublisher;
@@ -15,6 +16,7 @@ import com.bank.fd.service.FdTransactionService;
 import com.bank.fd.service.InterestEngineService;
 import com.bank.fd.service.InterestLifecycleService;
 import com.bank.fd.service.MaturityService;
+import com.bank.fd.service.AuditTrailService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +26,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.Map;
 
 @Service
 @Transactional
@@ -36,6 +39,7 @@ public class MaturityServiceImpl implements MaturityService {
     private final EventPublisher eventPublisher;
     private final FdStatementRepository statementRepository;
     private final AccountNumberGenerator accountNumberGenerator;
+    private final AuditTrailService auditTrail;
 
     public MaturityServiceImpl(FdAccountRepository accountRepository,
                                InterestEngineService interestEngineService,
@@ -44,7 +48,8 @@ public class MaturityServiceImpl implements MaturityService {
                                FdTransactionRepository transactionRepository,
                                EventPublisher eventPublisher,
                                FdStatementRepository statementRepository,
-                               AccountNumberGenerator accountNumberGenerator) {
+                               AccountNumberGenerator accountNumberGenerator,
+                               AuditTrailService auditTrail) {
         this.accountRepository = accountRepository;
         this.interestEngineService = interestEngineService;
         this.lifecycleService = lifecycleService;
@@ -53,6 +58,7 @@ public class MaturityServiceImpl implements MaturityService {
         this.eventPublisher = eventPublisher;
         this.statementRepository = statementRepository;
         this.accountNumberGenerator = accountNumberGenerator;
+        this.auditTrail = auditTrail;
     }
 
     @Override
@@ -61,32 +67,37 @@ public class MaturityServiceImpl implements MaturityService {
                 .map(FdAccount::getFdAccountNo).toList();
         int count = 0;
         for (String accountNumber : accountNumbers) {
-            if (processOne(accountNumber, today)) count++;
+            if (processOne(accountNumber, today, "MATURITY_JOB")) count++;
         }
         return count;
     }
 
     @Override
     public ApiResponse closeMaturedAccount(String fdAccountNo) {
+        return closeMaturedAccount(fdAccountNo, "BANK_OFFICER");
+    }
+
+    @Override
+    public ApiResponse closeMaturedAccount(String fdAccountNo, String requestedBy) {
         FdAccount account = accountRepository.findById(fdAccountNo)
                 .orElseThrow(() -> new FdNotFoundException(fdAccountNo));
         LocalDate today = LocalDate.now();
-        if (!"ACTIVE".equalsIgnoreCase(account.getStatus())) {
+        if (!FdLifecycleStatus.ACTIVE.name().equalsIgnoreCase(account.getStatus())) {
             throw new InvalidOperationException("Account is not ACTIVE: " + fdAccountNo);
         }
         if (account.getMaturityDate() != null && account.getMaturityDate().isAfter(today)) {
             throw new InvalidOperationException("Account has not matured yet (maturity: "
                     + account.getMaturityDate() + "). Use the premature withdrawal endpoint for early closure.");
         }
-        processOne(fdAccountNo, today);
+        processOne(fdAccountNo, today, requestedBy);
         return ApiResponse.success("FD Account " + fdAccountNo + " maturity instruction has been processed");
     }
 
-    private boolean processOne(String fdAccountNo, LocalDate processingDate) {
+    private boolean processOne(String fdAccountNo, LocalDate processingDate, String actor) {
         lifecycleService.processAccountThroughDate(fdAccountNo, processingDate);
         FdAccount account = accountRepository.findByIdForUpdate(fdAccountNo)
                 .orElseThrow(() -> new FdNotFoundException(fdAccountNo));
-        if (!"ACTIVE".equalsIgnoreCase(account.getStatus()) || account.getMaturityProcessedAt() != null) return false;
+        if (!FdLifecycleStatus.ACTIVE.name().equalsIgnoreCase(account.getStatus()) || account.getMaturityProcessedAt() != null) return false;
 
         LocalDate businessDate = account.getMaturityDate();
         BigDecimal maturityAmount = interestEngineService.calculateMaturityAmount(account);
@@ -94,7 +105,7 @@ public class MaturityServiceImpl implements MaturityService {
         transactionService.recordMaturityPayout(account.getFdAccountNo(), maturityAmount, businessDate, instruction);
 
         if ("PAYOUT".equals(instruction)) {
-            account.setStatus("CLOSED");
+            account.setStatus(FdLifecycleStatus.CLOSED.name());
             account.setCurrentBalance(BigDecimal.ZERO.setScale(3, RoundingMode.HALF_UP));
             account.setAccruedInterest(BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP));
         } else {
@@ -109,7 +120,7 @@ public class MaturityServiceImpl implements MaturityService {
             }
             FdAccount renewal = createRenewal(account, renewalAmount, processingDate);
             account.setRenewalAccountNo(renewal.getFdAccountNo());
-            account.setStatus("RENEWED");
+            account.setStatus(FdLifecycleStatus.RENEWED.name());
             account.setCurrentBalance(BigDecimal.ZERO.setScale(3, RoundingMode.HALF_UP));
             account.setAccruedInterest(BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP));
             transactionService.recordRenewal(account.getFdAccountNo(), renewal.getFdAccountNo(), renewalAmount, businessDate);
@@ -118,9 +129,22 @@ public class MaturityServiceImpl implements MaturityService {
         }
 
         account.setMaturityProcessedAt(LocalDateTime.now());
+        account.setClosureDate(businessDate);
+        account.setClosureType("PAYOUT".equals(instruction) ? "MATURITY_PAYOUT" : "MATURITY_RENEWAL");
+        account.setClosureReason("Maturity instruction processed: " + instruction);
+        account.setClosureGrossInterest(maturityAmount.subtract(account.getPrincipalAmount()).max(BigDecimal.ZERO));
+        account.setClosurePenaltyAmount(BigDecimal.ZERO);
+        account.setClosureNetPayout("PAYOUT".equals(instruction) ? maturityAmount
+                : maturityAmount.subtract("RENEW_PRINCIPAL".equals(instruction)
+                ? account.getPrincipalAmount() : maturityAmount).max(BigDecimal.ZERO));
+        account.setClosedBy(actor);
         accountRepository.save(account);
         saveFinalStatement(account, businessDate, maturityAmount);
         eventPublisher.publishFdMatured(account.getFdAccountNo(), account.getCustomerId(), maturityAmount, businessDate);
+        auditTrail.record(actor, "MATURITY_JOB".equals(actor) ? "SYSTEM" : "BANK_OFFICER",
+                "FD_MATURITY_PROCESSED", "FD_ACCOUNT", account.getFdAccountNo(), "SUCCESS",
+                Map.of("instruction", instruction, "maturityAmount", maturityAmount,
+                        "closureType", account.getClosureType()));
         return true;
     }
 
@@ -129,6 +153,8 @@ public class MaturityServiceImpl implements MaturityService {
         FdAccount renewal = new FdAccount();
         renewal.setFdAccountNo(accountNumberGenerator.generate(branchCode));
         renewal.setCustomerId(old.getCustomerId());
+        renewal.setCustomerNameSnapshot(old.getCustomerNameSnapshot());
+        renewal.setCustomerCategorySnapshot(old.getCustomerCategorySnapshot());
         renewal.setProductCode(old.getProductCode());
         renewal.setCurrency(old.getCurrency());
         renewal.setPrincipalAmount(amount);
@@ -142,7 +168,7 @@ public class MaturityServiceImpl implements MaturityService {
         renewal.setMaturityInstruction(old.getMaturityInstruction());
         renewal.setPrematureClosureAllowed(old.getPrematureClosureAllowed());
         renewal.setPrematureClosurePenaltyPct(old.getPrematureClosurePenaltyPct());
-        renewal.setStatus("ACTIVE");
+        renewal.setStatus(FdLifecycleStatus.ACTIVE.name());
         renewal.setStartDate(renewalDate);
         renewal.setMaturityDate(renewalDate.plusMonths(old.getTenureMonths()));
         renewal.setLastAccrualDate(renewalDate.minusDays(1));

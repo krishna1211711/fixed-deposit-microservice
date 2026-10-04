@@ -45,6 +45,7 @@ public class ProductServiceImpl implements ProductService {
         product.setMinDeposit(req.getMinDeposit());
         product.setMaxDeposit(req.getMaxDeposit());
         product.setRateCapAddon(req.getRateCapAddon() != null ? req.getRateCapAddon() : new BigDecimal("2.00"));
+        product.setCategoryAddonsStackable(req.getCategoryAddonsStackable() == null || req.getCategoryAddonsStackable());
         product.setPreMaturityPenaltyPct(req.getPreMaturityPenaltyPct() != null ? req.getPreMaturityPenaltyPct() : new BigDecimal("1.00"));
         Set<String> compoundingOptions = FdBusinessRules.normalizedSet(
                 req.getAllowedCompoundingFrequencies(), FdBusinessRules.COMPOUNDING_FREQUENCIES);
@@ -82,6 +83,7 @@ public class ProductServiceImpl implements ProductService {
         if (req.getMinDeposit() != null) product.setMinDeposit(req.getMinDeposit());
         if (req.getMaxDeposit() != null) product.setMaxDeposit(req.getMaxDeposit());
         if (req.getRateCapAddon() != null) product.setRateCapAddon(req.getRateCapAddon());
+        if (req.getCategoryAddonsStackable() != null) product.setCategoryAddonsStackable(req.getCategoryAddonsStackable());
         if (req.getPreMaturityPenaltyPct() != null) product.setPreMaturityPenaltyPct(req.getPreMaturityPenaltyPct());
         if (req.getAllowedCompoundingFrequencies() != null) {
             product.setAllowedCompoundingFrequencies(FdBusinessRules.normalizedSet(

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { FdAccount, Transaction, Statement } from '../models/models';
+import { FdAccount, FdOpeningRequest, Transaction, Statement } from '../models/models';
 
 @Injectable({
   providedIn: 'root'
@@ -13,9 +13,25 @@ export class FdAccountService {
   constructor(private http: HttpClient) {}
 
   createAccount(request: any, idempotencyKey: string): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/create`, request, {
+    return this.http.post<FdOpeningRequest>(`/api/fd/opening-requests`, request, {
       headers: { 'Idempotency-Key': idempotencyKey }
     });
+  }
+
+  getMyOpeningRequests(): Observable<FdOpeningRequest[]> {
+    return this.http.get<FdOpeningRequest[]>('/api/fd/opening-requests/mine');
+  }
+
+  getPendingOpeningRequests(): Observable<FdOpeningRequest[]> {
+    return this.http.get<FdOpeningRequest[]>('/api/fd/opening-requests/pending');
+  }
+
+  approveOpeningRequest(requestId: string, reason = ''): Observable<FdOpeningRequest> {
+    return this.http.post<FdOpeningRequest>(`/api/fd/opening-requests/${requestId}/approve`, { reason });
+  }
+
+  rejectOpeningRequest(requestId: string, reason: string): Observable<FdOpeningRequest> {
+    return this.http.post<FdOpeningRequest>(`/api/fd/opening-requests/${requestId}/reject`, { reason });
   }
 
   getMyAccounts(): Observable<FdAccount[]> {

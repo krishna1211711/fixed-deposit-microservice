@@ -45,6 +45,7 @@
 
         <div class="form-group">
           <label class="form-label">{{ 'fdCalc.categories' | translate }}</label>
+          <p class="text-muted text-sm">Simulation only: eligible add-ons stack and are capped at 2.00%. Real FD opening uses verified customer-profile categories and the selected product's stackability rule.</p>
           <div class="checkbox-group">
             <label class="checkbox-label" *ngFor="let opt of categoryOptions">
               <input type="checkbox" 

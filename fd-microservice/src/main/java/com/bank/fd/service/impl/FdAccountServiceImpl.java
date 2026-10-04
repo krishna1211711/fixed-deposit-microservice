@@ -6,6 +6,8 @@ import com.bank.fd.entity.FdAccount;
 import com.bank.fd.entity.FdStatement;
 import com.bank.fd.entity.FdTransaction;
 import com.bank.fd.entity.Product;
+import com.bank.fd.entity.CustomerProfile;
+import com.bank.fd.domain.FdLifecycleStatus;
 import com.bank.fd.event.EventPublisher;
 import com.bank.fd.exception.FdNotFoundException;
 import com.bank.fd.helper.AccountNumberGenerator;
@@ -16,6 +18,7 @@ import com.bank.fd.mapper.FdAccountMapper;
 import com.bank.fd.repository.FdAccountRepository;
 import com.bank.fd.repository.FdStatementRepository;
 import com.bank.fd.repository.FdTransactionRepository;
+import com.bank.fd.repository.CustomerProfileRepository;
 import com.bank.fd.service.FdAccountService;
 import com.bank.fd.service.FdTransactionService;
 import com.bank.fd.service.ProductService;
@@ -29,6 +32,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.Set;
+import java.util.Arrays;
 
 @Service
 @Transactional
@@ -43,6 +47,7 @@ public class FdAccountServiceImpl implements FdAccountService {
     private final InterestCalculationHelper interestCalculationHelper;
     private final FdAccountMapper accountMapper;
     private final EventPublisher eventPublisher;
+    private final CustomerProfileRepository customerProfileRepository;
 
     public FdAccountServiceImpl(FdAccountRepository accountRepository,
                                 FdTransactionRepository transactionRepository,
@@ -52,7 +57,8 @@ public class FdAccountServiceImpl implements FdAccountService {
                                 AccountNumberGenerator accountNumberGenerator,
                                 InterestCalculationHelper interestCalculationHelper,
                                 FdAccountMapper accountMapper,
-                                EventPublisher eventPublisher) {
+                                EventPublisher eventPublisher,
+                                CustomerProfileRepository customerProfileRepository) {
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
         this.statementRepository = statementRepository;
@@ -62,6 +68,7 @@ public class FdAccountServiceImpl implements FdAccountService {
         this.interestCalculationHelper = interestCalculationHelper;
         this.accountMapper = accountMapper;
         this.eventPublisher = eventPublisher;
+        this.customerProfileRepository = customerProfileRepository;
     }
 
     @Override
@@ -75,6 +82,12 @@ public class FdAccountServiceImpl implements FdAccountService {
                     "Product " + product.getProductCode() + " is denominated in " + product.getCurrency());
         }
         BigDecimal principal = CurrencyRules.normalizeAmount(request.getPrincipalAmount(), currency);
+        CustomerProfile customer = customerProfileRepository.findByCustomerId(request.getCustomerId())
+                .orElseThrow(() -> new com.bank.fd.exception.InvalidOperationException(
+                        "Customer reference does not exist: " + request.getCustomerId()));
+        List<String> verifiedCategories = customer.getCategory() == null ? List.of() : Arrays.stream(
+                        customer.getCategory().split("[,;]"))
+                .map(String::trim).filter(value -> !value.isBlank()).distinct().toList();
 
         Set<String> allowedCompounding = product.getAllowedCompoundingFrequencies();
         if (allowedCompounding == null || allowedCompounding.isEmpty()) {
@@ -98,8 +111,9 @@ public class FdAccountServiceImpl implements FdAccountService {
         // Apply category rate addons (e.g. SENIOR_CITIZEN, STAFF) capped at rateCapAddon
         BigDecimal finalRate = interestCalculationHelper.applyCategoryAddons(
                 product.getMinRate(),
-                request.getCategories(),
-                product.getRateCapAddon()
+                verifiedCategories,
+                product.getRateCapAddon(),
+                product.getCategoryAddonsStackable() == null || product.getCategoryAddonsStackable()
         );
 
         // Cap the final rate against the product's maximum allowed rate
@@ -112,6 +126,8 @@ public class FdAccountServiceImpl implements FdAccountService {
         FdAccount account = new FdAccount();
         account.setFdAccountNo(accountNo);
         account.setCustomerId(request.getCustomerId());
+        account.setCustomerNameSnapshot(customer.getFullName());
+        account.setCustomerCategorySnapshot(customer.getCategory());
         account.setProductCode(request.getProductCode());
         account.setCurrency(currency);
         account.setPrincipalAmount(principal);
@@ -122,7 +138,7 @@ public class FdAccountServiceImpl implements FdAccountService {
         account.setTenureMonths(request.getTermMonths());
         account.setCompoundingFrequency(selectedCompounding);
         account.setPayoutFrequency(selectedPayout);
-        account.setStatus("ACTIVE");
+        account.setStatus(FdLifecycleStatus.ACTIVE.name());
         account.setStartDate(startDate);
         account.setMaturityDate(maturityDate);
         account.setAccruedInterest(BigDecimal.ZERO);

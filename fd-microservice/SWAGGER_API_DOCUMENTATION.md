@@ -22,9 +22,11 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
 ```
 
 ### Roles Supported:
-1. **`CUSTOMER`**: Can calculate interest, open FD accounts, view own portfolio, view own statements/transactions, and request premature withdrawal on own accounts.
-2. **`BANK_OFFICER`**: Can create FD accounts for customers, trigger manual closures, view all customer accounts, and export reports.
-3. **`ADMIN`**: Full administrative access — create/update products, execute batch jobs on demand, perform time-travel simulations, and export compliance CSV reports.
+1. **`CUSTOMER`**: Can calculate interest, submit an opening request for self, view own portfolio/statements/transactions, and request premature withdrawal on own accounts.
+2. **`BANK_OFFICER`**: Maker role: submits requests for customers, triggers permitted manual maturity closure, views accounts, and exports reports.
+3. **`CHECKER`**: Independently approves or rejects pending opening requests. The maker username cannot authorize its own request.
+4. **`ADMIN`**: Configures products and executes auditable/idempotent batches. ADMIN does not create FDs unless the identity is deliberately assigned a maker role.
+5. **`AUDITOR`**: Read-only access to recent FD operational audit records.
 
 ---
 
@@ -190,13 +192,13 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
 
 ---
 
-### 4. FD Account Management Endpoints (`/api/fd/account`)
+### 4. FD Opening Workflow and Account Management (`/api/fd`)
 
-#### 4.1 Create FD Account (Book FD)
-- **Endpoint:** `POST /api/fd/account/create`
-- **Access:** Restricted to `BANK_OFFICER` or `ADMIN`
+#### 4.1 Submit FD Opening Request
+- **Endpoint:** `POST /api/fd/opening-requests`
+- **Access:** `CUSTOMER` (self only) or `BANK_OFFICER` (maker)
 - **Required Header:** `Idempotency-Key: <8-80 character client key>`
-- **Description:** Creates an FD account, initial DEPOSIT, and `FD_OPENED` outbox record in one transaction. An identical retry replays the original response; changed-payload key reuse returns HTTP 409.
+- **Description:** Validates the customer/product and stores `PENDING_CHECKER`; it does not yet create an account. Customer categories are server-owned eligibility data, never caller-selected rate overrides.
 - **Request Body:**
 ```json
 {
@@ -206,56 +208,60 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
   "termMonths": 12,
   "branchCode": "001",
   "currency": "INR",
-  "categories": ["SENIOR_CITIZEN"]
+  "compoundingFrequency": "QUARTERLY",
+  "payoutFrequency": "MATURITY",
+  "maturityInstruction": "PAYOUT"
 }
 ```
 - **Response (200 OK):**
 ```json
 {
-  "fdAccountNo": "00100000254",
+  "requestId": "c6fe42a1-9cc9-4e43-b0c9-173d80825c71",
+  "status": "PENDING_CHECKER",
   "customerId": "CUST001",
+  "customerName": "John Doe",
   "productCode": "FD_STD",
-  "currency": "INR",
   "principalAmount": 100000.00,
-  "interestRate": 7.00,
-  "tenureMonths": 12,
-  "compoundingFrequency": "QUARTERLY",
-  "status": "ACTIVE",
-  "maturityDate": "2026-08-30",
-  "accruedInterest": 0.00,
-  "initialTransactionId": 1045,
-  "message": "Account created successfully with initial deposit"
+  "requesterUsername": "officer1",
+  "requesterRole": "BANK_OFFICER"
 }
 ```
 
-#### 4.2 Get My FD Accounts
+#### 4.2 Checker Queue and Decision
+- `GET /api/fd/opening-requests/pending` — CHECKER queue.
+- `POST /api/fd/opening-requests/{requestId}/approve` — atomically creates account, DEPOSIT and outbox event; returns `fdAccountNo`.
+- `POST /api/fd/opening-requests/{requestId}/reject` — requires `{"reason":"..."}`.
+- `GET /api/fd/opening-requests/mine` — maker/customer request history.
+- Direct `POST /api/fd/account/create` is `ROLE_SYSTEM` only and is not a human/UI endpoint.
+
+#### 4.3 Get My FD Accounts
 - **Endpoint:** `GET /api/fd/accounts/my`
 - **Access:** Restricted to `CUSTOMER`
 - **Description:** Retrieves all FD accounts owned by the authenticated customer (extracted automatically from JWT token).
 - **Response (200 OK):** Array of `FdAccountResponse` objects.
 
-#### 4.3 Get All FD Accounts
+#### 4.4 Get All FD Accounts
 - **Endpoint:** `GET /api/fd/accounts/all`
 - **Access:** Restricted to `BANK_OFFICER` or `ADMIN`
 - **Response (200 OK):** Array of all `FdAccountResponse` objects in system.
 
-#### 4.4 Get Single FD Account
+#### 4.5 Get Single FD Account
 - **Endpoint:** `GET /api/fd/account/{fdAccountNo}`
 - **Access:** Authenticated
 - **Response (200 OK):** Single `FdAccountResponse` object.
 
-#### 4.5 Get Account Transaction History
+#### 4.6 Get Account Transaction History
 - **Endpoint:** `GET /api/fd/account/{fdAccountNo}/transactions`
 - **Access:** Authenticated
 - **Description:** Retrieves the append-only transaction ledger history for the account.
 - **Response (200 OK):** Array of `FdTransaction` objects with Debit/Credit GL accounts.
 
-#### 4.6 Get Account Monthly Statements
+#### 4.7 Get Account Monthly Statements
 - **Endpoint:** `GET /api/fd/account/{fdAccountNo}/statements`
 - **Access:** Authenticated
 - **Response (200 OK):** Array of `FdStatement` summary objects.
 
-#### 4.7 Request Premature Withdrawal
+#### 4.8 Request Premature Withdrawal
 - **Endpoint:** `POST /api/fd/account/withdraw`
 - **Access:** Restricted to `CUSTOMER` or `BANK_OFFICER`
 - **Description:** Performs early closure of an active FD account, calculates accrued interest till today, deducts product penalty %, updates account status to `PREMATURE_CLOSED`, and logs `WITHDRAWAL` and `PENALTY` transactions.
@@ -326,6 +332,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
 #### 6.1 Trigger Daily Interest Accrual Batch
 - **Endpoint:** `POST /api/admin/batch/interest-accrual`
 - **Access:** Restricted to `ADMIN`
+- **Behavior:** Database claim per job/business date; duplicate execution is skipped and both outcomes are audited with the actor.
 
 #### 6.2 Trigger Daily Maturity Processing Batch
 - **Endpoint:** `POST /api/admin/batch/maturity-processing`
@@ -338,6 +345,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
 #### 6.4 Fast-Forward System Date (Time Travel Simulation)
 - **Endpoint:** `POST /api/admin/time-travel`
 - **Access:** Restricted to `ADMIN`
+- **Environment:** Disabled by default. Explicitly enabled only for local test/demonstration; not an ordinary production banking capability.
 - **Request Body:**
 ```json
 {
@@ -361,10 +369,14 @@ All exceptions return a standardized JSON error response:
 }
 ```
 
+### 7. Audit Trail (`/api/audit`)
+
+- `GET /api/audit/recent` — `ADMIN` or `AUDITOR`; returns up to 200 newest append-only operational audit records.
+
 ### Standard HTTP Status Codes:
 - `200 OK`: Request succeeded.
 - `400 Bad Request`: Validation failure or invalid parameter.
 - `401 Unauthorized`: Missing or invalid JWT token.
-- `403 Forbidden`: Authenticated user lacks required role (`CUSTOMER`, `OFFICER`, `ADMIN`).
+- `403 Forbidden`: Authenticated user lacks the required role (`CUSTOMER`, `BANK_OFFICER`, `CHECKER`, `ADMIN`, or `AUDITOR`).
 - `404 Not Found`: Account or Product code does not exist.
 - `409 Conflict`: Duplicate entry (e.g., username already registered).

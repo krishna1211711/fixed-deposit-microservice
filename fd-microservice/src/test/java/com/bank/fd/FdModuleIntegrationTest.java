@@ -10,6 +10,7 @@ import com.bank.fd.repository.CustomerProfileRepository;
 import com.bank.fd.repository.FdAccountRepository;
 import com.bank.fd.repository.FdOutboxEventRepository;
 import com.bank.fd.repository.FdIdempotencyRecordRepository;
+import com.bank.fd.repository.FdOpeningRequestRepository;
 import com.bank.fd.repository.ProductRepository;
 import com.bank.fd.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,6 +33,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -64,15 +66,20 @@ class FdModuleIntegrationTest {
     private FdIdempotencyRecordRepository idempotencyRecordRepository;
 
     @Autowired
+    private FdOpeningRequestRepository openingRequestRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private String customerToken;
     private String officerToken;
     private String adminToken;
+    private String checkerToken;
 
     @BeforeEach
     void setupData() throws Exception {
         outboxEventRepository.deleteAll();
+        openingRequestRepository.deleteAll();
         idempotencyRecordRepository.deleteAll();
         fdAccountRepository.deleteAll();
         customerProfileRepository.deleteAll();
@@ -95,6 +102,13 @@ class FdModuleIntegrationTest {
         officerUser.setRole("BANK_OFFICER");
         userRepository.save(officerUser);
 
+        User checkerUser = new User();
+        checkerUser.setUsername("checker1");
+        checkerUser.setPasswordHash(passwordEncoder.encode("checker123"));
+        checkerUser.setEmail("checker@bank.com");
+        checkerUser.setRole("CHECKER");
+        userRepository.save(checkerUser);
+
         // 3. Create CUSTOMER user and profile
         User custUser = new User();
         custUser.setUsername("johndoe");
@@ -107,7 +121,7 @@ class FdModuleIntegrationTest {
         profile.setCustomerId("CUST001");
         profile.setUserId(custUser.getId());
         profile.setFullName("John Doe");
-        profile.setCategory("GENERAL");
+        profile.setCategory("SENIOR_CITIZEN");
         customerProfileRepository.save(profile);
 
         // 4. Create sample FD Product
@@ -133,6 +147,7 @@ class FdModuleIntegrationTest {
         customerToken = obtainToken("johndoe", "john123");
         officerToken = obtainToken("officer1", "officer123");
         adminToken = obtainToken("admin", "admin123");
+        checkerToken = obtainToken("checker1", "checker123");
     }
 
     private String obtainToken(String username, String password) throws Exception {
@@ -148,6 +163,32 @@ class FdModuleIntegrationTest {
 
         AuthResponse authResponse = objectMapper.readValue(result.getResponse().getContentAsString(), AuthResponse.class);
         return authResponse.getToken();
+    }
+
+    private FdAccountResponse submitAndApprove(FdAccountCreateRequest request, String key) throws Exception {
+        MvcResult submitted = mockMvc.perform(post("/api/fd/opening-requests")
+                        .header("Authorization", "Bearer " + officerToken)
+                        .header("Idempotency-Key", key)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk()).andReturn();
+        FdOpeningRequestResponse pending = objectMapper.readValue(
+                submitted.getResponse().getContentAsString(), FdOpeningRequestResponse.class);
+        assertEquals("PENDING_CHECKER", pending.getStatus());
+
+        MvcResult approved = mockMvc.perform(post("/api/fd/opening-requests/" + pending.getRequestId() + "/approve")
+                        .header("Authorization", "Bearer " + checkerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk()).andReturn();
+        FdOpeningRequestResponse decision = objectMapper.readValue(
+                approved.getResponse().getContentAsString(), FdOpeningRequestResponse.class);
+        assertEquals("APPROVED", decision.getStatus());
+
+        MvcResult account = mockMvc.perform(get("/api/fd/account/" + decision.getFdAccountNo())
+                        .header("Authorization", "Bearer " + officerToken))
+                .andExpect(status().isOk()).andReturn();
+        return objectMapper.readValue(account.getResponse().getContentAsString(), FdAccountResponse.class);
     }
 
     @Test
@@ -185,6 +226,54 @@ class FdModuleIntegrationTest {
         User registeredUser = userRepository.findByUsername("new-customer")
                 .orElseThrow(() -> new AssertionError("Registered user was not persisted"));
         assertEquals("CUSTOMER", registeredUser.getRole());
+    }
+
+    @Test
+    @DisplayName("FD opening follows customer/officer maker and independent checker roles")
+    void openingWorkflowEnforcesRoleAndOwnershipBoundaries() throws Exception {
+        FdAccountCreateRequest request = new FdAccountCreateRequest();
+        request.setCustomerId("CUST001");
+        request.setProductCode("FD_STD");
+        request.setPrincipalAmount(new BigDecimal("25000.00"));
+        request.setTermMonths(12);
+        request.setBranchCode("001");
+
+        mockMvc.perform(post("/api/fd/account/create")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .header("Idempotency-Key", "admin-direct-create-001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden());
+
+        MvcResult customerSubmission = mockMvc.perform(post("/api/fd/opening-requests")
+                        .header("Authorization", "Bearer " + customerToken)
+                        .header("Idempotency-Key", "customer-self-open-001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk()).andReturn();
+        FdOpeningRequestResponse pending = objectMapper.readValue(
+                customerSubmission.getResponse().getContentAsString(), FdOpeningRequestResponse.class);
+        assertEquals("PENDING_CHECKER", pending.getStatus());
+        assertEquals(0, fdAccountRepository.count());
+
+        request.setCustomerId("CUST999");
+        mockMvc.perform(post("/api/fd/opening-requests")
+                        .header("Authorization", "Bearer " + customerToken)
+                        .header("Idempotency-Key", "customer-other-open-001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(post("/api/fd/opening-requests/" + pending.getRequestId() + "/approve")
+                        .header("Authorization", "Bearer " + checkerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"KYC and product terms verified\"}"))
+                .andExpect(status().isOk());
+        assertEquals(1, fdAccountRepository.count());
+
+        mockMvc.perform(get("/api/audit/recent").header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].occurredAt").isString());
     }
 
     @Test
@@ -235,15 +324,7 @@ class FdModuleIntegrationTest {
         createReq.setCategories(List.of("SENIOR_CITIZEN")); // 6.00 + 0.50 = 6.50%
 
         String openingKey = "lifecycle-test-opening-001";
-        MvcResult createResult = mockMvc.perform(post("/api/fd/account/create")
-                .header("Authorization", "Bearer " + officerToken)
-                .header("Idempotency-Key", openingKey)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(createReq)))
-                .andExpect(status().isOk())
-                .andReturn();
-
-        FdAccountResponse createdAcct = objectMapper.readValue(createResult.getResponse().getContentAsString(), FdAccountResponse.class);
+        FdAccountResponse createdAcct = submitAndApprove(createReq, openingKey);
         assertNotNull(createdAcct.getFdAccountNo());
         assertEquals("CUST001", createdAcct.getCustomerId());
         assertEquals(new BigDecimal("6.50"), createdAcct.getInterestRate());
@@ -256,22 +337,22 @@ class FdModuleIntegrationTest {
         assertEquals(fdAccountNo, openedEvents.get(0).getAggregateId());
         assertEquals("PENDING", openedEvents.get(0).getStatus());
 
-        MvcResult replayResult = mockMvc.perform(post("/api/fd/account/create")
+        MvcResult replayResult = mockMvc.perform(post("/api/fd/opening-requests")
                         .header("Authorization", "Bearer " + officerToken)
                         .header("Idempotency-Key", openingKey)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createReq)))
                 .andExpect(status().isOk())
                 .andReturn();
-        FdAccountResponse replayed = objectMapper.readValue(
-                replayResult.getResponse().getContentAsString(), FdAccountResponse.class);
+        FdOpeningRequestResponse replayed = objectMapper.readValue(
+                replayResult.getResponse().getContentAsString(), FdOpeningRequestResponse.class);
         assertEquals(fdAccountNo, replayed.getFdAccountNo());
         assertEquals(1, fdAccountRepository.count());
         assertEquals(1, outboxEventRepository.findAll().stream()
                 .filter(event -> "FD_OPENED".equals(event.getEventType())).count());
 
         createReq.setPrincipalAmount(new BigDecimal("110000.00"));
-        mockMvc.perform(post("/api/fd/account/create")
+        mockMvc.perform(post("/api/fd/opening-requests")
                         .header("Authorization", "Bearer " + officerToken)
                         .header("Idempotency-Key", openingKey)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -359,15 +440,7 @@ class FdModuleIntegrationTest {
         createReq.setTermMonths(12);
         createReq.setBranchCode("001");
 
-        MvcResult createResult = mockMvc.perform(post("/api/fd/account/create")
-                .header("Authorization", "Bearer " + officerToken)
-                .header("Idempotency-Key", "manual-close-test-opening-001")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(createReq)))
-                .andExpect(status().isOk())
-                .andReturn();
-
-        FdAccountResponse createdAcct = objectMapper.readValue(createResult.getResponse().getContentAsString(), FdAccountResponse.class);
+        FdAccountResponse createdAcct = submitAndApprove(createReq, "manual-close-test-opening-001");
 
         // Attempt manual maturity close on active non-matured FD -> Must return 400 Bad Request
         mockMvc.perform(post("/api/fd/account/manual-close?fdAccountNo=" + createdAcct.getFdAccountNo())

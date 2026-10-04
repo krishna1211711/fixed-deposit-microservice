@@ -61,6 +61,24 @@ public class DevDataSeeder implements CommandLineRunner {
             userRepository.save(officer);
         }
 
+        if (userRepository.findByUsername("checker1").isEmpty()) {
+            User checker = new User();
+            checker.setUsername("checker1");
+            checker.setPasswordHash(passwordEncoder.encode("admin123"));
+            checker.setEmail("checker1@bank.com");
+            checker.setRole("CHECKER");
+            userRepository.save(checker);
+        }
+
+        if (userRepository.findByUsername("auditor1").isEmpty()) {
+            User auditor = new User();
+            auditor.setUsername("auditor1");
+            auditor.setPasswordHash(passwordEncoder.encode("admin123"));
+            auditor.setEmail("auditor1@bank.com");
+            auditor.setRole("AUDITOR");
+            userRepository.save(auditor);
+        }
+
         if (userRepository.findByUsername("johndoe").isEmpty()) {
             User customer = new User();
             customer.setUsername("johndoe");
@@ -123,6 +141,6 @@ public class DevDataSeeder implements CommandLineRunner {
             productRepository.save(prem);
         }
 
-        log.info("✅ [DEV PROFILE] Automatically seeded test accounts ('admin', 'officer1', 'johndoe') and products ('FD_STD', 'FD_PREM')");
+        log.info("[DEV PROFILE] Seeded admin, maker, checker, auditor and customer demo users");
     }
 }

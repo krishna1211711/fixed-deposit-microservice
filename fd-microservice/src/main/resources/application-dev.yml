@@ -18,3 +18,7 @@ spring:
       path: /h2-console
   flyway:
     enabled: false
+
+app:
+  time-travel:
+    enabled: true

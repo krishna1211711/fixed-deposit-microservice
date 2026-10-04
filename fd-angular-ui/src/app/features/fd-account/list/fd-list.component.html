@@ -2,8 +2,8 @@
   <div class="header-section mb-4 flex justify-between items-center">
     <h2>{{ authService.isCustomer() ? ('nav.myFds' | translate) : ('nav.allFds' | translate) }}</h2>
     
-    <div class="actions flex gap-4" *ngIf="!authService.isCustomer()">
-      <a routerLink="/fd/create" class="btn btn-primary">{{ 'nav.createFd' | translate }}</a>
+    <div class="actions flex gap-4" *ngIf="authService.isOfficer()">
+      <a routerLink="/fd/create" class="btn btn-primary">New FD Request</a>
     </div>
   </div>
 
@@ -18,6 +18,7 @@
           <option value="ACTIVE">Active</option>
           <option value="CLOSED">Closed</option>
           <option value="PREMATURE_CLOSED">Premature Closed</option>
+          <option value="RENEWED">Renewed</option>
         </select>
       </div>
     </div>
@@ -28,6 +29,7 @@
           <tr>
             <th>{{ 'fdAccount.accountNo' | translate }}</th>
             <th>{{ 'fdAccount.productCode' | translate }}</th>
+            <th>Customer / Owner</th>
             <th>Original Principal</th>
             <th>Current Balance</th>
             <th>Accrued Interest</th>
@@ -41,6 +43,7 @@
           <tr *ngFor="let acc of filteredAccounts" [routerLink]="['/fd', acc.fdAccountNo]" class="cursor-pointer">
             <td><strong>{{ acc.fdAccountNo }}</strong></td>
             <td>{{ acc.productCode }}</td>
+            <td>{{ acc.customerName || '—' }}<br><span class="text-muted">{{ acc.customerId }}</span></td>
             <td>{{ acc.principalAmount | currencyFormat:acc.currency }}</td>
             <td>{{ acc.currentBalance | currencyFormat:acc.currency }}</td>
             <td>{{ acc.accruedInterest | currencyFormat:acc.currency }}</td>
@@ -50,7 +53,7 @@
               <span class="badge" [ngClass]="{
                 'badge-active': acc.status === 'ACTIVE',
                 'badge-closed': acc.status === 'CLOSED',
-                'badge-warning': acc.status === 'PREMATURE_CLOSED'
+                'badge-warning': acc.status === 'PREMATURE_CLOSED' || acc.status === 'RENEWED'
               }">{{ acc.status }}</span>
             </td>
             <td>{{ acc.maturityDate | date:'mediumDate' }}</td>

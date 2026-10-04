@@ -6,4 +6,5 @@ import java.time.LocalDate;
 public interface MaturityService {
     int processMaturedAccounts(LocalDate today);
     ApiResponse closeMaturedAccount(String fdAccountNo);
+    ApiResponse closeMaturedAccount(String fdAccountNo, String requestedBy);
 }

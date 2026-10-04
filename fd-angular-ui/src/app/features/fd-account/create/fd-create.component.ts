@@ -6,6 +6,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { FdAccountService } from '../../../core/services/fd-account.service';
 import { ProductService } from '../../../core/services/product.service';
 import { Product } from '../../../core/models/models';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-fd-create',
@@ -38,10 +39,14 @@ export class FdCreateComponent implements OnInit {
   constructor(
     private fdService: FdAccountService,
     private productService: ProductService,
+    public authService: AuthService,
     private router: Router
   ) {}
 
   ngOnInit() {
+    if (this.authService.isCustomer()) {
+      this.request.customerId = this.authService.getCustomerId();
+    }
     this.loadProducts();
   }
 
@@ -78,14 +83,14 @@ export class FdCreateComponent implements OnInit {
       next: (res) => {
         this.openingIdempotencyKey = null;
         this.loading = false;
-        this.successMessage = `Account ${res.fdAccountNo} created successfully!`;
+        this.successMessage = `Request ${res.requestId} submitted for independent checker approval.`;
         setTimeout(() => {
-          this.router.navigate(['/fd', res.fdAccountNo]);
+          this.router.navigate(['/dashboard']);
         }, 2000);
       },
       error: (err) => {
         this.loading = false;
-        this.error = 'Failed to create FD account.';
+        this.error = err?.error?.message || 'Failed to submit the FD opening request.';
       }
     });
   }

@@ -1,6 +1,7 @@
 <div class="create-container animate-fade-in">
   <div class="header-section mb-4">
-    <h2>{{ 'fdAccount.create' | translate }}</h2>
+    <h2>Submit FD Opening Request</h2>
+    <p class="text-muted">The FD is created only after approval by a different checker.</p>
   </div>
 
   <div class="glass-card max-w-lg mx-auto">
@@ -16,7 +17,7 @@
       
       <div class="form-group">
         <label class="form-label">{{ 'fdAccount.customerId' | translate }}</label>
-        <input type="text" class="form-control" name="customerId" [(ngModel)]="request.customerId" required>
+        <input type="text" class="form-control" name="customerId" [(ngModel)]="request.customerId" [readonly]="authService.isCustomer()" required>
       </div>
 
       <div class="form-group">
@@ -86,7 +87,7 @@
       <div class="text-danger mb-4 text-center" *ngIf="error">{{ error }}</div>
 
       <button type="submit" class="btn btn-primary w-full" [disabled]="!createForm.valid || loading">
-        {{ loading ? ('common.loading' | translate) : ('common.submit' | translate) }}
+        {{ loading ? ('common.loading' | translate) : 'Submit for Approval' }}
       </button>
 
     </form>

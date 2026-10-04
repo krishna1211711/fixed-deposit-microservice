@@ -41,6 +41,8 @@ class WithdrawalServiceTest {
     private FdStatementRepository statementRepository;
     @Mock
     private FdInterestTransactionRepository interestRepository;
+    @Mock
+    private AuditTrailService auditTrail;
 
     @InjectMocks
     private WithdrawalServiceImpl withdrawalService;

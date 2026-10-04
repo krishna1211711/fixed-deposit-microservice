@@ -15,6 +15,8 @@
           <tr>
             <th>Product Code</th>
             <th>Total Accounts</th>
+            <th>Active</th>
+            <th>Closed / Matured / Renewed</th>
             <th>Total Principal</th>
             <th>Interest Accrued</th>
           </tr>
@@ -23,6 +25,8 @@
           <tr *ngFor="let item of summaryData">
             <td><strong>{{ item.productCode }}</strong></td>
             <td>{{ item.totalAccounts }}</td>
+            <td><strong class="text-success">{{ item.activeAccounts }}</strong></td>
+            <td>{{ item.closedAccounts }}</td>
             <td>{{ item.totalPrincipal | currencyFormat }}</td>
             <td>{{ item.totalInterestAccrued | currencyFormat }}</td>
           </tr>
@@ -34,7 +38,7 @@
 
   <!-- Customer View -->
   <div class="glass-card" *ngIf="authService.isCustomer() && portfolioData">
-    <div class="grid grid-cols-3 mb-4">
+    <div class="grid grid-cols-4 mb-4">
       <div class="p-4 text-center border-right">
         <h4 class="text-muted mb-2">Total Investments</h4>
         <h2 class="text-main">{{ portfolioData.totalInvestments | currencyFormat }}</h2>
@@ -47,7 +51,15 @@
         <h4 class="text-muted mb-2">Active Accounts</h4>
         <h2 class="text-main">{{ portfolioData.activeAccountsCount }}</h2>
       </div>
+      <div class="p-4 text-center">
+        <h4 class="text-muted mb-2">Closed / Matured</h4>
+        <h2 class="text-main">{{ portfolioData.closedAccountsCount }}</h2>
+      </div>
     </div>
+    <h3 class="mt-4">Active deposits</h3>
+    <div class="table-responsive"><table class="table"><thead><tr><th>FD Account</th><th>Product</th><th>Principal</th><th>Maturity</th><th>Status</th></tr></thead><tbody><tr *ngFor="let item of portfolioData.activeAccounts"><td>{{ item.fdAccountNo }}</td><td>{{ item.productCode }}</td><td>{{ item.principalAmount | currencyFormat }}</td><td>{{ item.maturityDate | date:'mediumDate' }}</td><td>{{ item.status }}</td></tr></tbody></table></div>
+    <h3 class="mt-4">Closed, matured, or renewed deposits</h3>
+    <div class="table-responsive"><table class="table"><thead><tr><th>FD Account</th><th>Product</th><th>Original Principal</th><th>Contractual Maturity</th><th>Status</th></tr></thead><tbody><tr *ngFor="let item of portfolioData.closedAccounts"><td>{{ item.fdAccountNo }}</td><td>{{ item.productCode }}</td><td>{{ item.principalAmount | currencyFormat }}</td><td>{{ item.maturityDate | date:'mediumDate' }}</td><td>{{ item.status }}</td></tr></tbody></table></div>
   </div>
 
   <div class="text-center p-4" *ngIf="loading">

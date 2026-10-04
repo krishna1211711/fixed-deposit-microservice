@@ -90,6 +90,46 @@ public class LifecycleOutboxWriter {
                         "renewalAccountNo", event.getRenewalAccountNo()));
     }
 
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
+    public void onOpeningWorkflow(FDOpeningWorkflowEvent event) {
+        String eventId = UUID.randomUUID().toString();
+        String correlationId = MDC.get("correlationId");
+        if (correlationId == null || correlationId.isBlank()) correlationId = eventId;
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("schemaVersion", "1.0");
+        payload.put("eventId", eventId);
+        payload.put("correlationId", correlationId);
+        payload.put("producer", "fd-account-service");
+        payload.put("occurredAt", Instant.now().toString());
+        payload.put("eventType", event.getEventType());
+        payload.put("aggregateType", "FD_OPENING_REQUEST");
+        payload.put("aggregateId", event.getRequestId());
+        payload.put("customerId", event.getCustomerId());
+        payload.put("productCode", event.getProductCode());
+        payload.put("amount", event.getAmount());
+        payload.put("currency", "INR");
+        payload.put("status", event.getStatus());
+        payload.put("subject", "FD opening request " + event.getStatus());
+        payload.put("messageBody", "Your FD opening request " + event.getRequestId()
+                + " is " + event.getStatus() + ".");
+
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+        FdOutboxEvent outbox = new FdOutboxEvent();
+        outbox.setEventId(eventId);
+        outbox.setAggregateType("FD_OPENING_REQUEST");
+        outbox.setAggregateId(event.getRequestId());
+        outbox.setEventType(event.getEventType());
+        outbox.setTopic(topic);
+        outbox.setPartitionKey(event.getRequestId());
+        outbox.setPayload(serialize(payload));
+        outbox.setStatus("PENDING");
+        outbox.setAttemptCount(0);
+        outbox.setOccurredAt(now);
+        outbox.setCreatedAt(now);
+        outbox.setNextAttemptAt(now);
+        outboxRepository.save(outbox);
+    }
+
     private void enqueue(String eventType, String customerId, String fdAccountNo, BigDecimal amount,
                          LocalDate businessDate, String subject, String summary,
                          Map<String, Object> additionalData) {

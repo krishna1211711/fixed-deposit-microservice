@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class FdAccountCreateRequest {
     @NotBlank
@@ -28,6 +29,7 @@ public class FdAccountCreateRequest {
     private String branchCode;
     
     private String currency = "INR";
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private List<String> categories;
     private String compoundingFrequency;
     private String payoutFrequency = "MATURITY";

@@ -26,7 +26,7 @@ export const routes: Routes = [
     path: 'fd/create', 
     loadComponent: () => import('./features/fd-account/create/fd-create.component').then(m => m.FdCreateComponent),
     canActivate: [authGuard, roleGuard],
-    data: { roles: ['BANK_OFFICER', 'ADMIN'] }
+    data: { roles: ['CUSTOMER', 'BANK_OFFICER'] }
   },
   { 
     path: 'fd/list', 
@@ -62,6 +62,18 @@ export const routes: Routes = [
     data: { roles: ['ADMIN'] }
   },
   {
+    path: 'checker/opening-requests',
+    loadComponent: () => import('./features/checker/opening-requests/opening-requests.component').then(m => m.OpeningRequestsComponent),
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['CHECKER'] }
+  },
+  {
+    path: 'audit',
+    loadComponent: () => import('./features/audit/audit-log.component').then(m => m.AuditLogComponent),
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['ADMIN', 'AUDITOR'] }
+  },
+  {
     path: 'admin/products',
     loadComponent: () => import('./features/admin/product-management/product-management.component').then(m => m.ProductManagementComponent),
     canActivate: [authGuard, roleGuard],
@@ -70,7 +82,8 @@ export const routes: Routes = [
   { 
     path: 'reports', 
     loadComponent: () => import('./features/reports/reports.component').then(m => m.ReportsComponent),
-    canActivate: [authGuard]
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['CUSTOMER', 'BANK_OFFICER', 'ADMIN'] }
   },
   { path: '**', redirectTo: 'dashboard' }
 ];

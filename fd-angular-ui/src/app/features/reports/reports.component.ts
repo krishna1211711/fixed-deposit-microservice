@@ -36,7 +36,10 @@ export class ReportsComponent implements OnInit {
           this.portfolioData = {
             totalInvestments: accounts.reduce((sum, item) => sum + Number(item.principalAmount || 0), 0),
             totalInterestEarned: accounts.reduce((sum, item) => sum + Number(item.accruedInterest || 0), 0),
-            activeAccountsCount: accounts.filter(item => item.status === 'ACTIVE').length
+            activeAccountsCount: accounts.filter(item => item.status === 'ACTIVE').length,
+            closedAccountsCount: accounts.filter(item => item.status !== 'ACTIVE').length,
+            activeAccounts: accounts.filter(item => item.status === 'ACTIVE'),
+            closedAccounts: accounts.filter(item => item.status !== 'ACTIVE')
           };
           this.loading = false;
           this.cdr.detectChanges();

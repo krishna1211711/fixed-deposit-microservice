@@ -231,7 +231,7 @@ Role matrix:
 
 > “For account detail, transaction and statement endpoints, `FdAccountController.assertAccountAccess()` allows officers/admins through, but when the role is CUSTOMER it compares token customerId with the account’s stored customerId. This prevents one customer from guessing another account number.”
 
-Demo credentials all use `admin123`: `admin`, `officer1`, and `johndoe`.
+Demo credentials all use `admin123`: `admin` (configuration/batch), `officer1` (maker), `checker1` (independent authorizer), `auditor1` (read-only audit), and `johndoe` (customer `CUST001`).
 
 ---
 
@@ -569,7 +569,7 @@ Important component sequences:
 
 - Login: `LoginComponent.onSubmit()` → `AuthService.login()` → token saved → dashboard.
 - Dashboard: `ngOnInit()` → role-specific data load.
-- Create FD: `ngOnInit()` → `loadProducts()` → `onProductChange()` → `onSubmit()`.
+- Submit FD: `ngOnInit()` → `loadProducts()` → `onProductChange()` → `onSubmit()` → `POST /api/fd/opening-requests`. The CHECKER queue calls approve/reject; approval invokes the existing atomic opening service and only then creates the FD/deposit/outbox record.
 - Account list: `ngOnInit()` → `loadAccounts()` → role chooses own/all API.
 - Detail: route account number → `loadData()` and `loadTransactions()`.
 - Statements: route account number → `loadStatements()`.
@@ -681,7 +681,7 @@ Be explicit rather than pretending this is a complete commercial bank:
 7. Report service currently reads the same database; production should use a replica/read model.
 8. JWT local default and demo credentials must be replaced before any real deployment.
 9. Kafka is single-node and MySQL single-instance locally; production requires replicated managed infrastructure, backups and disaster recovery.
-10. There is no maker-checker approval, KYC/AML engine, tax deduction, lien, nomination, holiday calendar or regulatory reporting. Those are deliberately beyond the student-project boundary.
+10. FD opening now has an in-module maker-checker control and operational audit log. External KYC/AML, bank-wide workflow/audit, tax deduction, lien, nomination, holiday calendar and regulatory reporting remain beyond the student-project boundary and must integrate through APIs/events rather than database joins.
 11. Notification delivery is idempotent for recorded event IDs, but failed delivery needs a proper retry/dead-letter policy before production use.
 
 > “These are not hidden defects. They mark the boundary between a realistic teaching implementation and a full regulated core-banking platform.”

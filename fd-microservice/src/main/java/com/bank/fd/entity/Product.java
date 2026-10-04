@@ -48,6 +48,9 @@ public class Product {
     @Column(name = "rate_cap_addon", precision = 5, scale = 2)
     private BigDecimal rateCapAddon;
 
+    @Column(name = "category_addons_stackable", nullable = false)
+    private Boolean categoryAddonsStackable = true;
+
     @Column(name = "pre_maturity_penalty_pct", precision = 5, scale = 2)
     private BigDecimal preMaturityPenaltyPct;
 
@@ -129,6 +132,8 @@ public class Product {
     public void setMaxDeposit(BigDecimal maxDeposit) { this.maxDeposit = maxDeposit; }
     public BigDecimal getRateCapAddon() { return rateCapAddon; }
     public void setRateCapAddon(BigDecimal rateCapAddon) { this.rateCapAddon = rateCapAddon; }
+    public Boolean getCategoryAddonsStackable() { return categoryAddonsStackable; }
+    public void setCategoryAddonsStackable(Boolean value) { this.categoryAddonsStackable = value; }
     public BigDecimal getPreMaturityPenaltyPct() { return preMaturityPenaltyPct; }
     public void setPreMaturityPenaltyPct(BigDecimal preMaturityPenaltyPct) { this.preMaturityPenaltyPct = preMaturityPenaltyPct; }
     public String getCompoundingFrequency() { return compoundingFrequency; }

@@ -46,6 +46,12 @@
         </div>
 
         <div class="detail-group">
+          <label class="text-muted">Customer / Owner</label>
+          <div class="value">{{ account.customerName || 'Not captured' }} ({{ account.customerId }})</div>
+          <div class="text-muted">Category at opening: {{ account.customerCategory || 'STANDARD' }}</div>
+        </div>
+
+        <div class="detail-group">
           <label class="text-muted">Customer ID</label>
           <div class="value">{{ account.customerId }}</div>
         </div>
@@ -75,6 +81,21 @@
           <div class="value">{{ account.createdAt | date:'medium' }}</div>
         </div>
         
+      </div>
+    </div>
+
+    <div class="glass-card animate-slide-up mt-4" *ngIf="account.status !== 'ACTIVE'">
+      <h3>Closure / Maturity Outcome</h3>
+      <p class="text-muted">A zero current balance is expected after settlement. The original contractual maturity date remains preserved for audit and is not the closure date.</p>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="detail-group"><label class="text-muted">Closure Type</label><div class="value">{{ account.closureType || 'Not recorded' }}</div></div>
+        <div class="detail-group"><label class="text-muted">Actual Closure Date</label><div class="value">{{ account.closureDate | date:'mediumDate' }}</div></div>
+        <div class="detail-group"><label class="text-muted">Reason</label><div class="value">{{ account.closureReason || '—' }}</div></div>
+        <div class="detail-group"><label class="text-muted">Closed By</label><div class="value">{{ account.closedBy || 'SYSTEM' }}</div></div>
+        <div class="detail-group"><label class="text-muted">Gross Interest</label><div class="value">{{ (account.closureGrossInterest || 0) | currencyFormat:account.currency }}</div></div>
+        <div class="detail-group"><label class="text-muted">Penalty</label><div class="value">{{ (account.closurePenaltyAmount || 0) | currencyFormat:account.currency }}</div></div>
+        <div class="detail-group"><label class="text-muted">Net Payout</label><div class="value">{{ (account.closureNetPayout || 0) | currencyFormat:account.currency }}</div></div>
+        <div class="detail-group"><label class="text-muted">Settlement Account</label><div class="value">{{ account.closureTransferAccountMasked || '—' }}</div></div>
       </div>
     </div>
   </div>

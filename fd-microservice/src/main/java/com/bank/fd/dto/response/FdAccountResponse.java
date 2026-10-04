@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
 public class FdAccountResponse {
     private String fdAccountNo;
     private String customerId;
+    private String customerName;
+    private String customerCategory;
     private String productCode;
     private String currency;
     private BigDecimal principalAmount;
@@ -29,6 +31,14 @@ public class FdAccountResponse {
     private Boolean prematureClosureAllowed;
     private BigDecimal prematureClosurePenaltyPct;
     private LocalDateTime maturityProcessedAt;
+    private LocalDate closureDate;
+    private String closureType;
+    private String closureReason;
+    private BigDecimal closureGrossInterest;
+    private BigDecimal closurePenaltyAmount;
+    private BigDecimal closureNetPayout;
+    private String closureTransferAccountMasked;
+    private String closedBy;
     private String renewalAccountNo;
     private LocalDateTime createdAt;
     private String createdBy;
@@ -42,6 +52,10 @@ public class FdAccountResponse {
 
     public String getCustomerId() { return customerId; }
     public void setCustomerId(String customerId) { this.customerId = customerId; }
+    public String getCustomerName() { return customerName; }
+    public void setCustomerName(String value) { this.customerName = value; }
+    public String getCustomerCategory() { return customerCategory; }
+    public void setCustomerCategory(String value) { this.customerCategory = value; }
 
     public String getProductCode() { return productCode; }
     public void setProductCode(String productCode) { this.productCode = productCode; }
@@ -95,6 +109,22 @@ public class FdAccountResponse {
     public void setPrematureClosurePenaltyPct(BigDecimal value) { this.prematureClosurePenaltyPct = value; }
     public LocalDateTime getMaturityProcessedAt() { return maturityProcessedAt; }
     public void setMaturityProcessedAt(LocalDateTime value) { this.maturityProcessedAt = value; }
+    public LocalDate getClosureDate() { return closureDate; }
+    public void setClosureDate(LocalDate value) { this.closureDate = value; }
+    public String getClosureType() { return closureType; }
+    public void setClosureType(String value) { this.closureType = value; }
+    public String getClosureReason() { return closureReason; }
+    public void setClosureReason(String value) { this.closureReason = value; }
+    public BigDecimal getClosureGrossInterest() { return closureGrossInterest; }
+    public void setClosureGrossInterest(BigDecimal value) { this.closureGrossInterest = value; }
+    public BigDecimal getClosurePenaltyAmount() { return closurePenaltyAmount; }
+    public void setClosurePenaltyAmount(BigDecimal value) { this.closurePenaltyAmount = value; }
+    public BigDecimal getClosureNetPayout() { return closureNetPayout; }
+    public void setClosureNetPayout(BigDecimal value) { this.closureNetPayout = value; }
+    public String getClosureTransferAccountMasked() { return closureTransferAccountMasked; }
+    public void setClosureTransferAccountMasked(String value) { this.closureTransferAccountMasked = value; }
+    public String getClosedBy() { return closedBy; }
+    public void setClosedBy(String value) { this.closedBy = value; }
     public String getRenewalAccountNo() { return renewalAccountNo; }
     public void setRenewalAccountNo(String value) { this.renewalAccountNo = value; }
 

@@ -29,8 +29,11 @@ public class DailyInterestAccrualJob {
 
     @Scheduled(cron = "0 0 1 * * ?")
     public void executeDailyAccrual() {
-        LocalDate businessDate = LocalDate.now();
-        jobExecutionCoordinator.executeOnce(
+        runForDate(LocalDate.now());
+    }
+
+    public boolean runForDate(LocalDate businessDate) {
+        return jobExecutionCoordinator.executeOnce(
                 "DAILY_INTEREST_ACCRUAL", businessDate,
                 () -> processInterestAccrual(businessDate));
     }

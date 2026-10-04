@@ -40,7 +40,7 @@ public class FdAccountController {
     }
 
     @PostMapping({"/account/create", "/account/create-with-txn"})
-    @PreAuthorize("hasRole('BANK_OFFICER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('SYSTEM')")
     public ResponseEntity<FdAccountResponse> createAccount(
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody FdAccountCreateRequest request,
@@ -96,9 +96,9 @@ public class FdAccountController {
     }
 
     @PostMapping("/account/manual-close")
-    @PreAuthorize("hasRole('BANK_OFFICER') or hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse> closeManually(@RequestParam String fdAccountNo) {
-        return ResponseEntity.ok(maturityService.closeMaturedAccount(fdAccountNo));
+    @PreAuthorize("hasRole('BANK_OFFICER')")
+    public ResponseEntity<ApiResponse> closeManually(@RequestParam String fdAccountNo, Authentication authentication) {
+        return ResponseEntity.ok(maturityService.closeMaturedAccount(fdAccountNo, authentication.getName()));
     }
 
     private void assertAccountAccess(String fdAccountNo, Authentication authentication) {

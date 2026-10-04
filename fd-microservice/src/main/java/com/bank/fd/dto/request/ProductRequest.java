@@ -40,6 +40,7 @@ public class ProductRequest {
 
     @DecimalMin("0.0")
     private BigDecimal rateCapAddon;
+    private Boolean categoryAddonsStackable = true;
 
     @DecimalMin("0.0")
     private BigDecimal preMaturityPenaltyPct;
@@ -86,6 +87,8 @@ public class ProductRequest {
 
     public BigDecimal getRateCapAddon() { return rateCapAddon; }
     public void setRateCapAddon(BigDecimal rateCapAddon) { this.rateCapAddon = rateCapAddon; }
+    public Boolean getCategoryAddonsStackable() { return categoryAddonsStackable; }
+    public void setCategoryAddonsStackable(Boolean value) { this.categoryAddonsStackable = value; }
 
     public BigDecimal getPreMaturityPenaltyPct() { return preMaturityPenaltyPct; }
     public void setPreMaturityPenaltyPct(BigDecimal preMaturityPenaltyPct) { this.preMaturityPenaltyPct = preMaturityPenaltyPct; }

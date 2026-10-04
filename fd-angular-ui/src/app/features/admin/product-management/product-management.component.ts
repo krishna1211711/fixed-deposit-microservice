@@ -89,6 +89,7 @@ export class ProductManagementComponent implements OnInit {
       minDeposit: 10000,
       maxDeposit: 10000000,
       rateCapAddon: 1.5,
+      categoryAddonsStackable: true,
       preMaturityPenaltyPct: 1,
       compoundingFrequency: 'QUARTERLY',
       allowedCompoundingFrequencies: ['MONTHLY', 'QUARTERLY', 'HALF_YEARLY', 'YEARLY'],

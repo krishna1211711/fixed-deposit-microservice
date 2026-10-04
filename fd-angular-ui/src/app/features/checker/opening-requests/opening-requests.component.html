@@ -1,0 +1,30 @@
+<div class="queue-container animate-fade-in">
+  <div class="header-section mb-4">
+    <h2>FD Maker–Checker Approval Queue</h2>
+    <p class="text-muted">A checker verifies the request but cannot approve a request made by the same username.</p>
+  </div>
+
+  <div class="alert alert-success mb-4" *ngIf="message">{{ message }}</div>
+  <div class="text-danger mb-4" *ngIf="error">{{ error }}</div>
+
+  <div class="glass-card">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Requested</th><th>Maker</th><th>Customer / Owner</th><th>Product</th><th>Amount</th><th>Review note</th><th>Decision</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let request of requests">
+            <td>{{ request.createdAt | date:'medium' }}</td>
+            <td><strong>{{ request.requesterUsername }}</strong><br><span class="text-muted">{{ request.requesterRole }}</span></td>
+            <td>{{ request.customerName }}<br><span class="text-muted">{{ request.customerId }}</span></td>
+            <td>{{ request.productCode }}</td>
+            <td>{{ request.principalAmount | currencyFormat:request.currency }}</td>
+            <td><input class="form-control" [(ngModel)]="reasons[request.requestId]" placeholder="Verification or rejection reason"></td>
+            <td class="decision-actions"><button class="btn btn-primary" (click)="approve(request)">Approve</button><button class="btn btn-danger" (click)="reject(request)">Reject</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="text-center p-4 text-muted" *ngIf="!loading && requests.length === 0">No FD requests are waiting for approval.</div>
+    <div class="text-center p-4" *ngIf="loading">Loading approval queue…</div>
+  </div>
+</div>

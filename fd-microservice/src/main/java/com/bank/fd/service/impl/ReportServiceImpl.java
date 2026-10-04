@@ -47,7 +47,9 @@ public class ReportServiceImpl implements ReportService {
 
             long totalAccounts = productAccounts.size();
             long activeAccounts = productAccounts.stream().filter(a -> "ACTIVE".equalsIgnoreCase(a.getStatus())).count();
-            long closedAccounts = productAccounts.stream().filter(a -> "CLOSED".equalsIgnoreCase(a.getStatus()) || "PREMATURE_CLOSED".equalsIgnoreCase(a.getStatus())).count();
+            long closedAccounts = productAccounts.stream().filter(a -> "CLOSED".equalsIgnoreCase(a.getStatus())
+                    || "PREMATURE_CLOSED".equalsIgnoreCase(a.getStatus())
+                    || "RENEWED".equalsIgnoreCase(a.getStatus())).count();
 
             BigDecimal totalPrincipal = productAccounts.stream()
                     .map(FdAccount::getPrincipalAmount)

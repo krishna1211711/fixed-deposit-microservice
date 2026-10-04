@@ -18,6 +18,12 @@ public class FdAccount {
     @Column(name = "customer_id", nullable = false)
     private String customerId;
 
+    @Column(name = "customer_name_snapshot")
+    private String customerNameSnapshot;
+
+    @Column(name = "customer_category_snapshot")
+    private String customerCategorySnapshot;
+
     @Column(name = "product_code", nullable = false)
     private String productCode;
 
@@ -84,6 +90,30 @@ public class FdAccount {
     @Column(name = "maturity_processed_at")
     private LocalDateTime maturityProcessedAt;
 
+    @Column(name = "closure_date")
+    private LocalDate closureDate;
+
+    @Column(name = "closure_type")
+    private String closureType;
+
+    @Column(name = "closure_reason", length = 500)
+    private String closureReason;
+
+    @Column(name = "closure_gross_interest", precision = 18, scale = 6)
+    private BigDecimal closureGrossInterest;
+
+    @Column(name = "closure_penalty_amount", precision = 18, scale = 3)
+    private BigDecimal closurePenaltyAmount;
+
+    @Column(name = "closure_net_payout", precision = 18, scale = 3)
+    private BigDecimal closureNetPayout;
+
+    @Column(name = "closure_transfer_account_masked", length = 40)
+    private String closureTransferAccountMasked;
+
+    @Column(name = "closed_by", length = 100)
+    private String closedBy;
+
     @Column(name = "renewal_account_no")
     private String renewalAccountNo;
 
@@ -133,6 +163,10 @@ public class FdAccount {
     public void setFdAccountNo(String fdAccountNo) { this.fdAccountNo = fdAccountNo; }
     public String getCustomerId() { return customerId; }
     public void setCustomerId(String customerId) { this.customerId = customerId; }
+    public String getCustomerNameSnapshot() { return customerNameSnapshot; }
+    public void setCustomerNameSnapshot(String value) { this.customerNameSnapshot = value; }
+    public String getCustomerCategorySnapshot() { return customerCategorySnapshot; }
+    public void setCustomerCategorySnapshot(String value) { this.customerCategorySnapshot = value; }
     public String getProductCode() { return productCode; }
     public void setProductCode(String productCode) { this.productCode = productCode; }
     public String getCurrency() { return currency; }
@@ -177,6 +211,22 @@ public class FdAccount {
     public void setPrematureClosurePenaltyPct(BigDecimal prematureClosurePenaltyPct) { this.prematureClosurePenaltyPct = prematureClosurePenaltyPct; }
     public LocalDateTime getMaturityProcessedAt() { return maturityProcessedAt; }
     public void setMaturityProcessedAt(LocalDateTime maturityProcessedAt) { this.maturityProcessedAt = maturityProcessedAt; }
+    public LocalDate getClosureDate() { return closureDate; }
+    public void setClosureDate(LocalDate value) { this.closureDate = value; }
+    public String getClosureType() { return closureType; }
+    public void setClosureType(String value) { this.closureType = value; }
+    public String getClosureReason() { return closureReason; }
+    public void setClosureReason(String value) { this.closureReason = value; }
+    public BigDecimal getClosureGrossInterest() { return closureGrossInterest; }
+    public void setClosureGrossInterest(BigDecimal value) { this.closureGrossInterest = value; }
+    public BigDecimal getClosurePenaltyAmount() { return closurePenaltyAmount; }
+    public void setClosurePenaltyAmount(BigDecimal value) { this.closurePenaltyAmount = value; }
+    public BigDecimal getClosureNetPayout() { return closureNetPayout; }
+    public void setClosureNetPayout(BigDecimal value) { this.closureNetPayout = value; }
+    public String getClosureTransferAccountMasked() { return closureTransferAccountMasked; }
+    public void setClosureTransferAccountMasked(String value) { this.closureTransferAccountMasked = value; }
+    public String getClosedBy() { return closedBy; }
+    public void setClosedBy(String value) { this.closedBy = value; }
     public String getRenewalAccountNo() { return renewalAccountNo; }
     public void setRenewalAccountNo(String renewalAccountNo) { this.renewalAccountNo = renewalAccountNo; }
     public LocalDateTime getCreatedAt() { return createdAt; }

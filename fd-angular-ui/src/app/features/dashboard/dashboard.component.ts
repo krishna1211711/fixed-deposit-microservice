@@ -38,6 +38,11 @@ export class DashboardComponent implements OnInit {
 
   loadData() {
     this.loading = true;
+
+    if (this.authService.isChecker() || this.authService.isAuditor()) {
+      this.loading = false;
+      return;
+    }
     
     if (this.authService.isCustomer()) {
       this.fdService.getMyAccounts().subscribe({

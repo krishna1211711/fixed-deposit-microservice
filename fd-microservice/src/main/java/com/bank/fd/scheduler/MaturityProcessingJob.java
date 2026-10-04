@@ -21,8 +21,11 @@ public class MaturityProcessingJob {
 
     @Scheduled(cron = "0 0 4 * * ?")
     public void executeMaturityProcessing() {
-        LocalDate businessDate = LocalDate.now();
-        jobExecutionCoordinator.executeOnce(
+        runForDate(LocalDate.now());
+    }
+
+    public boolean runForDate(LocalDate businessDate) {
+        return jobExecutionCoordinator.executeOnce(
                 "MATURITY_PROCESSING", businessDate,
                 () -> processMaturity(businessDate));
     }

@@ -14,12 +14,18 @@
 - Reporting is independently deployable and obtains data only through authenticated FD APIs; it has no FD database credentials.
 - `fd_accounts.customer_id` and `fd_accounts.product_code` are cross-context identifiers without foreign keys. Internal FD-owned tables retain appropriate FKs.
 - Separate FD ER diagram, OpenAPI HTTP contract, AsyncAPI event contract, Docker Compose topology, CI, and demonstration documentation.
+- Maker-checker opening with CUSTOMER/BANK_OFFICER makers, a separate CHECKER decision, owner snapshots, workflow events, and no ADMIN creation bypass.
+- Explicit lifecycle and closure metadata distinguish contractual maturity from actual early closure; legacy CLOSED/zero-balance/future-maturity rows are migrated to PREMATURE_CLOSED.
+- Append-only FD audit records cover workflow decisions, product changes, batches, time-travel simulation, maturity, and premature closure.
+- Product configuration explicitly chooses whether multiple verified customer-category add-ons stack (subject to the cap) or only the highest eligible add-on applies.
+- Staff reports separate active from closed/matured/renewed accounts; customer reports show separate lists.
 
 ## Deliberately local for the college demonstration
 
 - Identity, customer, and product reference implementations remain in the FD application so this repository runs independently. At team integration time their ports must be bound to the other groups' versioned APIs; FD persistence must continue storing identifiers/snapshotted terms only.
 - Mailpit is the free local email sink. A real provider is optional and configured only through secrets.
 - Docker Compose is the verified zero-cost environment. Kubernetes files are deployment examples, not proof of a live cloud environment.
+- Time travel is a local test/demonstration simulator. It is disabled by default and is not a production banking capability or event sourcing.
 
 ## External work that cannot be completed inside this repository
 

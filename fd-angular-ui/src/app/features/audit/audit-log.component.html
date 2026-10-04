@@ -1,0 +1,17 @@
+<div class="audit-container animate-fade-in">
+  <div class="header-section mb-4">
+    <h2>FD Audit Trail</h2>
+    <p class="text-muted">Who did what, to which entity, when, and with what outcome. Audit records are append-only.</p>
+  </div>
+  <div class="text-danger mb-4" *ngIf="error">{{ error }}</div>
+  <div class="glass-card">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Time (UTC)</th><th>Actor</th><th>Role</th><th>Action</th><th>Entity</th><th>Outcome</th><th>Details</th></tr></thead>
+        <tbody><tr *ngFor="let log of logs"><td>{{ log.occurredAt | date:'medium' }}</td><td>{{ log.actorUsername }}</td><td>{{ log.actorRole }}</td><td><strong>{{ log.action }}</strong></td><td>{{ log.entityType }}<br><span class="text-muted">{{ log.entityId }}</span></td><td><span class="badge badge-active">{{ log.outcome }}</span></td><td><code>{{ log.detailsJson || '—' }}</code></td></tr></tbody>
+      </table>
+    </div>
+    <div class="text-center p-4" *ngIf="loading">Loading audit trail…</div>
+    <div class="text-center p-4 text-muted" *ngIf="!loading && logs.length === 0">No audit records found.</div>
+  </div>
+</div>

@@ -51,4 +51,10 @@ public class EventPublisher {
         applicationEventPublisher.publishEvent(
                 new FDRenewedEvent(this, fdAccountNo, renewalAccountNo, customerId, amount, date));
     }
+
+    public void publishOpeningWorkflow(String eventType, String requestId, String customerId,
+                                       String productCode, BigDecimal amount, String status) {
+        applicationEventPublisher.publishEvent(new FDOpeningWorkflowEvent(
+                this, eventType, requestId, customerId, productCode, amount, status));
+    }
 }

@@ -29,6 +29,10 @@
 
     <!-- Customer Routes -->
     <ng-container *ngIf="authService.isCustomer()">
+      <a routerLink="/fd/create" class="nav-item" [class.active]="isActive('/fd/create')" title="Open Fixed Deposit">
+        <div class="nav-icon">+</div>
+        <span class="nav-text" *ngIf="isExpanded">Open FD</span>
+      </a>
       <a routerLink="/fd/list" class="nav-item" [class.active]="isActive('/fd/list')" title="{{ 'nav.myFds' | translate }}">
         <div class="nav-icon">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
@@ -37,7 +41,7 @@
       </a>
     </ng-container>
 
-    <!-- Officer / Admin Routes -->
+    <!-- Officer / Admin read access -->
     <ng-container *ngIf="authService.isAdmin() || authService.isOfficer()">
       <a routerLink="/fd/list" class="nav-item" [class.active]="isActive('/fd/list')" title="{{ 'nav.allFds' | translate }}">
         <div class="nav-icon">
@@ -46,11 +50,29 @@
         <span class="nav-text" *ngIf="isExpanded">{{ 'nav.allFds' | translate }}</span>
       </a>
 
-      <a routerLink="/fd/create" class="nav-item" [class.active]="isActive('/fd/create')" title="{{ 'nav.createFd' | translate }}">
+    </ng-container>
+
+    <!-- Maker route: deliberately excludes ADMIN -->
+    <ng-container *ngIf="authService.isOfficer()">
+      <a routerLink="/fd/create" class="nav-item" [class.active]="isActive('/fd/create')" title="Submit FD request">
         <div class="nav-icon">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
         </div>
-        <span class="nav-text" *ngIf="isExpanded">{{ 'nav.createFd' | translate }}</span>
+        <span class="nav-text" *ngIf="isExpanded">New FD Request</span>
+      </a>
+    </ng-container>
+
+    <ng-container *ngIf="authService.isChecker()">
+      <a routerLink="/checker/opening-requests" class="nav-item" [class.active]="isActive('/checker/opening-requests')" title="Maker-checker approval queue">
+        <div class="nav-icon">✓</div>
+        <span class="nav-text" *ngIf="isExpanded">Approval Queue</span>
+      </a>
+    </ng-container>
+
+    <ng-container *ngIf="authService.isAuditor() || authService.isAdmin()">
+      <a routerLink="/audit" class="nav-item" [class.active]="isActive('/audit')" title="Immutable audit trail">
+        <div class="nav-icon">≡</div>
+        <span class="nav-text" *ngIf="isExpanded">Audit Trail</span>
       </a>
     </ng-container>
 
@@ -80,7 +102,7 @@
     </ng-container>
 
     <div class="nav-divider"></div>
-    <a routerLink="/reports" class="nav-item" [class.active]="isActive('/reports')" title="{{ 'nav.reports' | translate }}">
+    <a *ngIf="authService.isCustomer() || authService.isOfficer() || authService.isAdmin()" routerLink="/reports" class="nav-item" [class.active]="isActive('/reports')" title="{{ 'nav.reports' | translate }}">
       <div class="nav-icon">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
       </div>

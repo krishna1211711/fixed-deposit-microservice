@@ -42,8 +42,11 @@ public class StatementGenerationJob {
 
     @Scheduled(cron = "0 0 2 * * ?")
     public void executeStatementGeneration() {
-        LocalDate businessDate = LocalDate.now();
-        jobExecutionCoordinator.executeOnce(
+        runForDate(LocalDate.now());
+    }
+
+    public boolean runForDate(LocalDate businessDate) {
+        return jobExecutionCoordinator.executeOnce(
                 "STATEMENT_GENERATION", businessDate,
                 () -> generateStatements(businessDate));
     }
