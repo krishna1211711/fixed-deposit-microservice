@@ -197,7 +197,7 @@ class FdModuleIntegrationTest {
         String attemptedAdminRegistration = """
                 {
                   "username": "self-appointed-admin",
-                  "password": "secure-password",
+                  "password": "StrongPass1!",
                   "email": "self-appointed-admin@example.com",
                   "role": "ADMIN"
                 }
@@ -213,7 +213,7 @@ class FdModuleIntegrationTest {
         String customerRegistration = """
                 {
                   "username": "new-customer",
-                  "password": "secure-password",
+                  "password": "StrongPass1!",
                   "email": "new-customer@example.com"
                 }
                 """;
@@ -226,6 +226,19 @@ class FdModuleIntegrationTest {
         User registeredUser = userRepository.findByUsername("new-customer")
                 .orElseThrow(() -> new AssertionError("Registered user was not persisted"));
         assertEquals("CUSTOMER", registeredUser.getRole());
+
+        String weakPasswordRegistration = """
+                {
+                  "username": "weak-password-user",
+                  "password": "password",
+                  "email": "weak-password@example.com"
+                }
+                """;
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(weakPasswordRegistration))
+                .andExpect(status().isBadRequest());
+        assertTrue(userRepository.findByUsername("weak-password-user").isEmpty());
     }
 
     @Test

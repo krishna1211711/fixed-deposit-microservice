@@ -30,7 +30,7 @@ export class RegisterComponent {
         this.router.navigate(['/login']);
       },
       error: (err) => {
-        this.error = 'Registration failed. Please try a different username.';
+        this.error = err?.error?.message || 'Registration failed. Please check the supplied details.';
         this.loading = false;
       }
     });

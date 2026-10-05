@@ -159,34 +159,31 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
 
 #### 3.1 Calculate Maturity & Interest
 - **Endpoint:** `POST /api/fd/calculate`
-- **Access:** Restricted to `CUSTOMER`
-- **Description:** Simulates maturity amount and interest earned using Simple or Compound formulas with category add-on rate bonuses.
+- **Access:** Any authenticated role
+- **Description:** Simulates the compound maturity amount using the authoritative Product rate and, for a customer login, verified Customer-category benefits. The browser cannot supply a rate or category.
 - **Request Body:**
 ```json
 {
+  "productCode": "FD_STD",
   "principal": 100000.00,
   "termMonths": 12,
-  "baseRate": 6.50,
-  "compoundingFrequency": "QUARTERLY",
-  "calculationType": "COMPOUND",
-  "categories": ["SENIOR_CITIZEN", "STAFF"]
+  "compoundingFrequency": "QUARTERLY"
 }
 ```
 - **Response (200 OK):**
 ```json
 {
   "principal": 100000.00,
-  "effectiveRate": 8.00,
+  "effectiveRate": 5.50,
   "tenureMonths": 12,
   "compoundingFrequency": "QUARTERLY",
   "calculationType": "COMPOUND",
-  "maturityAmount": 108243.22,
-  "interestEarned": 8243.22,
+  "maturityAmount": 105586.36,
+  "interestEarned": 5586.36,
   "categoryAddons": {
-    "SENIOR_CITIZEN": 0.50,
-    "STAFF": 1.00
+    "VERIFIED_CATEGORY_BENEFIT": 0.50
   },
-  "totalAddon": 1.50
+  "totalAddon": 0.50
 }
 ```
 
