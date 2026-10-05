@@ -56,6 +56,54 @@ services:
       timeout: 5s
       retries: 20
 
+  report-mysql:
+    image: mysql:8.0
+    container_name: fd-report-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${REPORT_DB_ROOT_PASSWORD:-report_root_demo_password}
+      MYSQL_DATABASE: ${REPORT_DB_NAME:-report_db}
+      MYSQL_USER: ${REPORT_DB_USERNAME:-report_user}
+      MYSQL_PASSWORD: ${REPORT_DB_PASSWORD:-report_demo_password}
+    volumes:
+      - report-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${REPORT_DB_ROOT_PASSWORD:-report_root_demo_password}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  audit-mysql:
+    image: mysql:8.0
+    container_name: fd-audit-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${AUDIT_DB_ROOT_PASSWORD:-audit_root_demo_password}
+      MYSQL_DATABASE: ${AUDIT_DB_NAME:-audit_db}
+      MYSQL_USER: ${AUDIT_DB_USERNAME:-audit_user}
+      MYSQL_PASSWORD: ${AUDIT_DB_PASSWORD:-audit_demo_password}
+    volumes:
+      - audit-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${AUDIT_DB_ROOT_PASSWORD:-audit_root_demo_password}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  accounting-mysql:
+    image: mysql:8.0
+    container_name: fd-accounting-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${ACCOUNTING_DB_ROOT_PASSWORD:-accounting_root_demo_password}
+      MYSQL_DATABASE: ${ACCOUNTING_DB_NAME:-accounting_db}
+      MYSQL_USER: ${ACCOUNTING_DB_USERNAME:-accounting_user}
+      MYSQL_PASSWORD: ${ACCOUNTING_DB_PASSWORD:-accounting_demo_password}
+    volumes:
+      - accounting-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${ACCOUNTING_DB_ROOT_PASSWORD:-accounting_root_demo_password}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   fd-service:
     build: ./fd-microservice
     container_name: fd-microservice
@@ -77,6 +125,7 @@ services:
       APP_EVENTS_KAFKA_ENABLED: "true"
       FD_EVENTS_TOPIC: fd.lifecycle.v1
       APP_TIME_TRAVEL_ENABLED: "true"
+      BANKING_TIME_ZONE: Asia/Kolkata
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8080/actuator/health"]
       interval: 10s
@@ -93,10 +142,18 @@ services:
         condition: service_healthy
       report-service:
         condition: service_healthy
+      audit-service:
+        condition: service_healthy
+      accounting-service:
+        condition: service_healthy
     environment:
       JWT_SECRET: ${JWT_SECRET:-fd-local-demo-secret-change-before-any-real-deployment}
       FD_SERVICE_URI: http://fd-service:8080
+      IDENTITY_SERVICE_URI: ${IDENTITY_SERVICE_URI:-http://fd-service:8080}
+      PRODUCT_SERVICE_URI: ${PRODUCT_SERVICE_URI:-http://fd-service:8080}
       REPORT_SERVICE_URI: http://report-service:5000
+      AUDIT_SERVICE_URI: http://audit-service:5002
+      ACCOUNTING_SERVICE_URI: http://accounting-service:5003
 
   angular-ui:
     build: ./fd-angular-ui
@@ -113,10 +170,19 @@ services:
     expose:
       - "5000"
     depends_on:
-      fd-service:
+      report-mysql:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     environment:
-      FD_SERVICE_URI: http://fd-service:8080
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      FD_EVENTS_TOPIC: fd.lifecycle.v1
+      KAFKA_CONSUMER_GROUP: fd-report-service-v1
+      REPORT_DB_HOST: report-mysql
+      REPORT_DB_PORT: 3306
+      REPORT_DB_USER: ${REPORT_DB_USERNAME:-report_user}
+      REPORT_DB_PASSWORD: ${REPORT_DB_PASSWORD:-report_demo_password}
+      REPORT_DB_NAME: ${REPORT_DB_NAME:-report_db}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
       interval: 10s
@@ -153,6 +219,56 @@ services:
       timeout: 5s
       retries: 20
 
+  audit-service:
+    build: ./audit-service
+    container_name: fd-audit-service
+    expose:
+      - "5002"
+    depends_on:
+      audit-mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      FD_EVENTS_TOPIC: fd.lifecycle.v1
+      KAFKA_CONSUMER_GROUP: fd-audit-service-v1
+      AUDIT_DB_HOST: audit-mysql
+      AUDIT_DB_PORT: 3306
+      AUDIT_DB_USER: ${AUDIT_DB_USERNAME:-audit_user}
+      AUDIT_DB_PASSWORD: ${AUDIT_DB_PASSWORD:-audit_demo_password}
+      AUDIT_DB_NAME: ${AUDIT_DB_NAME:-audit_db}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5002/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  accounting-service:
+    build: ./accounting-service
+    container_name: fd-accounting-service
+    expose:
+      - "5003"
+    depends_on:
+      accounting-mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      FD_EVENTS_TOPIC: fd.lifecycle.v1
+      KAFKA_CONSUMER_GROUP: fd-accounting-service-v1
+      ACCOUNTING_DB_HOST: accounting-mysql
+      ACCOUNTING_DB_PORT: 3306
+      ACCOUNTING_DB_USER: ${ACCOUNTING_DB_USERNAME:-accounting_user}
+      ACCOUNTING_DB_PASSWORD: ${ACCOUNTING_DB_PASSWORD:-accounting_demo_password}
+      ACCOUNTING_DB_NAME: ${ACCOUNTING_DB_NAME:-accounting_db}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5003/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
   mailpit:
     image: axllent/mailpit:v1.27
     container_name: fd-mailpit
@@ -163,3 +279,6 @@ services:
 volumes:
   mysql-data:
   notification-mysql-data:
+  report-mysql-data:
+  audit-mysql-data:
+  accounting-mysql-data:

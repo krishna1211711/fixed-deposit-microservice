@@ -280,11 +280,10 @@ class FdModuleIntegrationTest {
     @DisplayName("Authenticated customer can use the manual-compatible FD calculator endpoint")
     void testAuthenticatedFdCalculator() throws Exception {
         FdCalculateRequest req = new FdCalculateRequest();
+        req.setProductCode("FD_STD");
         req.setPrincipal(new BigDecimal("50000.00"));
-        req.setBaseRate(new BigDecimal("6.50"));
         req.setTermMonths(12);
         req.setCompoundingFrequency("QUARTERLY");
-        req.setCategories(List.of("SENIOR_CITIZEN")); // +0.50% -> 7.00%
 
         MvcResult result = mockMvc.perform(post("/api/fd/calculate")
                 .header("Authorization", "Bearer " + customerToken)
@@ -295,7 +294,7 @@ class FdModuleIntegrationTest {
 
         FdCalculateResponse res = objectMapper.readValue(result.getResponse().getContentAsString(), FdCalculateResponse.class);
         assertNotNull(res);
-        assertEquals(new BigDecimal("7.00"), res.getEffectiveRate());
+        assertEquals(new BigDecimal("6.50"), res.getEffectiveRate());
         assertTrue(res.getInterestEarned().compareTo(BigDecimal.ZERO) > 0);
         assertTrue(res.getMaturityAmount().compareTo(new BigDecimal("50000.00")) > 0);
 

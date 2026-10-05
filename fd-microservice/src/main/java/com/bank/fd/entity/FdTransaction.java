@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 @Entity
@@ -53,8 +54,10 @@ public class FdTransaction {
 
     @PrePersist
     protected void onCreate() {
-        txnTimestamp = LocalDateTime.now();
-        if (businessDate == null) businessDate = LocalDate.now();
+        if (txnTimestamp == null) txnTimestamp = LocalDateTime.now(ZoneOffset.UTC);
+        if (businessDate == null) {
+            throw new IllegalStateException("businessDate must be supplied by the Banking Clock");
+        }
         if (referenceId == null) referenceId = UUID.randomUUID().toString();
     }
 

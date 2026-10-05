@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "fd_outbox_events")
@@ -56,6 +57,18 @@ public class FdOutboxEvent {
     @Column(name = "last_error", length = 1000)
     private String lastError;
 
+    @Column(name = "schema_version", nullable = false, length = 20)
+    private String schemaVersion = "1.0";
+
+    @Column(name = "business_date")
+    private LocalDate businessDate;
+
+    @Column(name = "correlation_id", length = 100)
+    private String correlationId;
+
+    @Column(name = "causation_id", length = 100)
+    private String causationId;
+
     public String getEventId() { return eventId; }
     public void setEventId(String eventId) { this.eventId = eventId; }
     public String getAggregateType() { return aggregateType; }
@@ -86,4 +99,12 @@ public class FdOutboxEvent {
     public void setPublishedAt(LocalDateTime publishedAt) { this.publishedAt = publishedAt; }
     public String getLastError() { return lastError; }
     public void setLastError(String lastError) { this.lastError = lastError; }
+    public String getSchemaVersion() { return schemaVersion; }
+    public void setSchemaVersion(String schemaVersion) { this.schemaVersion = schemaVersion; }
+    public LocalDate getBusinessDate() { return businessDate; }
+    public void setBusinessDate(LocalDate businessDate) { this.businessDate = businessDate; }
+    public String getCorrelationId() { return correlationId; }
+    public void setCorrelationId(String correlationId) { this.correlationId = correlationId; }
+    public String getCausationId() { return causationId; }
+    public void setCausationId(String causationId) { this.causationId = causationId; }
 }

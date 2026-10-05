@@ -1,7 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
-import { AdminService } from '../../../core/services/admin.service';
+import { AdminService, BatchRun } from '../../../core/services/admin.service';
 
 @Component({
   selector: 'app-batch-control',
@@ -10,7 +10,11 @@ import { AdminService } from '../../../core/services/admin.service';
   templateUrl: './batch-control.component.html',
   styleUrls: ['./batch-control.component.scss']
 })
-export class BatchControlComponent {
+export class BatchControlComponent implements OnInit {
+  businessDate = '';
+  timeTravelEnabled = false;
+  batchRuns: BatchRun[] = [];
+  metadataError = '';
   jobs = [
     { id: 'accrual', name: 'Interest Accrual', loading: false, result: '' },
     { id: 'maturity', name: 'Maturity Processing', loading: false, result: '' },
@@ -18,6 +22,25 @@ export class BatchControlComponent {
   ];
 
   constructor(private adminService: AdminService) {}
+
+  ngOnInit(): void {
+    this.loadOperationalMetadata();
+  }
+
+  loadOperationalMetadata(): void {
+    this.metadataError = '';
+    this.adminService.getBusinessDate().subscribe({
+      next: status => {
+        this.businessDate = status.businessDate;
+        this.timeTravelEnabled = status.timeTravelEnabled;
+      },
+      error: () => this.metadataError = 'Unable to load the banking business date.'
+    });
+    this.adminService.getBatchRuns().subscribe({
+      next: runs => this.batchRuns = runs,
+      error: () => this.metadataError = 'Unable to load recent batch runs.'
+    });
+  }
 
   runJob(job: any) {
     job.loading = true;
@@ -31,7 +54,11 @@ export class BatchControlComponent {
     request.subscribe({
       next: (res: any) => {
         job.loading = false;
-        job.result = `Success: ${res.message || 'Job completed'}`;
+        const counts = res.data
+          ? ` Found ${res.data.recordsFound}, processed ${res.data.recordsProcessed}, failed ${res.data.recordsFailed}.`
+          : '';
+        job.result = `Success: ${res.message || 'Job completed'}.${counts}`;
+        this.loadOperationalMetadata();
       },
       error: () => {
         job.loading = false;

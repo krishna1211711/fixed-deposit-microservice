@@ -7,6 +7,7 @@ import com.bank.fd.repository.FdInterestTransactionRepository;
 import com.bank.fd.repository.FdStatementRepository;
 import com.bank.fd.repository.FdTransactionRepository;
 import com.bank.fd.service.JobExecutionCoordinator;
+import com.bank.fd.service.BusinessDateService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -36,6 +37,8 @@ class StatementGenerationJobTest {
     private FdTransactionRepository transactionRepository;
     @Mock
     private JobExecutionCoordinator jobExecutionCoordinator;
+    @Mock
+    private BusinessDateService businessDateService;
 
     @InjectMocks
     private StatementGenerationJob statementJob;
@@ -50,7 +53,9 @@ class StatementGenerationJobTest {
         account.setCurrentBalance(new BigDecimal("100000.00"));
         account.setAccruedInterest(new BigDecimal("3500.00")); // Lifetime accrued
 
-        when(accountRepository.findAllActiveAccounts()).thenReturn(List.of(account));
+        when(accountRepository.findAccountsForStatementDate(statementRunDate)).thenReturn(List.of(account));
+        when(transactionRepository.sumAmountByTypesAndDate(eq("FD001000001"), eq(statementRunDate), anyList()))
+                .thenReturn(BigDecimal.ZERO);
         when(interestTransactionRepository.sumInterestBetween("FD001000001", statementRunDate, statementRunDate))
                 .thenReturn(new BigDecimal("18.00"));
 

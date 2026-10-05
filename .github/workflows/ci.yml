@@ -46,8 +46,24 @@ jobs:
         working-directory: notification-service
       - run: python -m unittest discover -s tests
         working-directory: notification-service
+      - run: pip install -r requirements.txt
+        working-directory: report-service
       - run: python -m py_compile app.py
+        working-directory: report-service
+      - run: python -m unittest discover -s tests
         working-directory: report-service
       - run: python -m py_compile app.py
         working-directory: notification-service
+      - run: pip install -r requirements.txt
+        working-directory: audit-service
+      - run: python -m unittest discover -s tests
+        working-directory: audit-service
+      - run: python -m py_compile app.py
+        working-directory: audit-service
+      - run: pip install -r requirements.txt
+        working-directory: accounting-service
+      - run: python -m unittest discover -s tests
+        working-directory: accounting-service
+      - run: python -m py_compile app.py
+        working-directory: accounting-service
       - run: docker compose config --quiet

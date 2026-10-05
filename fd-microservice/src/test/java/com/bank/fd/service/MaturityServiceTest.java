@@ -47,6 +47,8 @@ class MaturityServiceTest {
     private AccountNumberGenerator accountNumberGenerator;
     @Mock
     private AuditTrailService auditTrail;
+    @Mock
+    private BusinessDateService businessDateService;
 
     @InjectMocks
     private MaturityServiceImpl maturityService;
@@ -64,6 +66,7 @@ class MaturityServiceTest {
         account.setAccruedInterest(BigDecimal.ZERO);
         account.setMaturityInstruction("PAYOUT");
         account.setMaturityDate(LocalDate.now());
+        lenient().when(businessDateService.currentBusinessDate()).thenReturn(LocalDate.now());
     }
 
     @Test

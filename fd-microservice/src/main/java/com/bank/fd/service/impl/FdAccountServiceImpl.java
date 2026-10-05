@@ -6,7 +6,6 @@ import com.bank.fd.entity.FdAccount;
 import com.bank.fd.entity.FdStatement;
 import com.bank.fd.entity.FdTransaction;
 import com.bank.fd.entity.Product;
-import com.bank.fd.entity.CustomerProfile;
 import com.bank.fd.domain.FdLifecycleStatus;
 import com.bank.fd.event.EventPublisher;
 import com.bank.fd.exception.FdNotFoundException;
@@ -18,10 +17,11 @@ import com.bank.fd.mapper.FdAccountMapper;
 import com.bank.fd.repository.FdAccountRepository;
 import com.bank.fd.repository.FdStatementRepository;
 import com.bank.fd.repository.FdTransactionRepository;
-import com.bank.fd.repository.CustomerProfileRepository;
+import com.bank.fd.integration.CustomerReferencePort;
 import com.bank.fd.service.FdAccountService;
 import com.bank.fd.service.FdTransactionService;
 import com.bank.fd.service.ProductService;
+import com.bank.fd.service.BusinessDateService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.Set;
-import java.util.Arrays;
 
 @Service
 @Transactional
@@ -47,7 +46,8 @@ public class FdAccountServiceImpl implements FdAccountService {
     private final InterestCalculationHelper interestCalculationHelper;
     private final FdAccountMapper accountMapper;
     private final EventPublisher eventPublisher;
-    private final CustomerProfileRepository customerProfileRepository;
+    private final CustomerReferencePort customerReferencePort;
+    private final BusinessDateService businessDateService;
 
     public FdAccountServiceImpl(FdAccountRepository accountRepository,
                                 FdTransactionRepository transactionRepository,
@@ -58,7 +58,8 @@ public class FdAccountServiceImpl implements FdAccountService {
                                 InterestCalculationHelper interestCalculationHelper,
                                 FdAccountMapper accountMapper,
                                 EventPublisher eventPublisher,
-                                CustomerProfileRepository customerProfileRepository) {
+                                CustomerReferencePort customerReferencePort,
+                                BusinessDateService businessDateService) {
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
         this.statementRepository = statementRepository;
@@ -68,13 +69,13 @@ public class FdAccountServiceImpl implements FdAccountService {
         this.interestCalculationHelper = interestCalculationHelper;
         this.accountMapper = accountMapper;
         this.eventPublisher = eventPublisher;
-        this.customerProfileRepository = customerProfileRepository;
+        this.customerReferencePort = customerReferencePort;
+        this.businessDateService = businessDateService;
     }
 
     @Override
     public FdAccountResponse createAccount(FdAccountCreateRequest request, String createdBy) {
-        Product product = productService.validateProductForFd(
-                request.getProductCode(), request.getTermMonths(), request.getPrincipalAmount());
+        Product product = productService.validateOpeningTerms(request);
         String currency = CurrencyRules.normalizeCode(request.getCurrency() != null
                 ? request.getCurrency() : product.getCurrency());
         if (!currency.equalsIgnoreCase(product.getCurrency())) {
@@ -82,12 +83,8 @@ public class FdAccountServiceImpl implements FdAccountService {
                     "Product " + product.getProductCode() + " is denominated in " + product.getCurrency());
         }
         BigDecimal principal = CurrencyRules.normalizeAmount(request.getPrincipalAmount(), currency);
-        CustomerProfile customer = customerProfileRepository.findByCustomerId(request.getCustomerId())
-                .orElseThrow(() -> new com.bank.fd.exception.InvalidOperationException(
-                        "Customer reference does not exist: " + request.getCustomerId()));
-        List<String> verifiedCategories = customer.getCategory() == null ? List.of() : Arrays.stream(
-                        customer.getCategory().split("[,;]"))
-                .map(String::trim).filter(value -> !value.isBlank()).distinct().toList();
+        var customer = customerReferencePort.getVerifiedCustomer(request.getCustomerId());
+        List<String> verifiedCategories = customer.verifiedCategories();
 
         Set<String> allowedCompounding = product.getAllowedCompoundingFrequencies();
         if (allowedCompounding == null || allowedCompounding.isEmpty()) {
@@ -105,7 +102,8 @@ public class FdAccountServiceImpl implements FdAccountService {
                 request.getPayoutFrequency() != null ? request.getPayoutFrequency() : "MATURITY",
                 allowedPayout);
         String maturityInstruction = FdBusinessRules.requireMaturityInstruction(request.getMaturityInstruction());
-        LocalDate startDate = request.getStartDate() != null ? request.getStartDate() : LocalDate.now();
+        LocalDate startDate = request.getStartDate() != null
+                ? request.getStartDate() : businessDateService.currentBusinessDate();
         LocalDate maturityDate = startDate.plusMonths(request.getTermMonths());
 
         // Apply category rate addons (e.g. SENIOR_CITIZEN, STAFF) capped at rateCapAddon
@@ -126,9 +124,12 @@ public class FdAccountServiceImpl implements FdAccountService {
         FdAccount account = new FdAccount();
         account.setFdAccountNo(accountNo);
         account.setCustomerId(request.getCustomerId());
-        account.setCustomerNameSnapshot(customer.getFullName());
-        account.setCustomerCategorySnapshot(customer.getCategory());
+        account.setCustomerNameSnapshot(customer.fullName());
+        account.setCustomerCategorySnapshot(String.join(",", customer.verifiedCategories()));
         account.setProductCode(request.getProductCode());
+        account.setProductVersion(product.getProductCode() + "@" + product.getEffectiveDate());
+        account.setCalculationType("COMPOUND");
+        account.setPayoutAccountRef(request.getPayoutAccountRef());
         account.setCurrency(currency);
         account.setPrincipalAmount(principal);
         account.setCurrentBalance(principal);

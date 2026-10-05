@@ -8,7 +8,7 @@ openapi: 3.0.3
 info:
   title: Fixed Deposit (FD) Microservice - FD Account Module API
   description: Official OpenAPI 3.0 specification for the FD bounded context. Human users submit maker requests and a distinct CHECKER authorizes them; the direct creation command is internal-only.
-  version: 1.1.0
+  version: 1.2.0
 servers:
   - url: http://localhost:8080/api/fd
     description: Direct Microservice Base URL
@@ -19,6 +19,39 @@ security:
   - BearerAuth: []
 
 paths:
+  /admin/business-date:
+    get:
+      servers: [{ url: 'http://localhost:9090/api' }]
+      summary: Read the controlled Banking Date
+      description: ADMIN only. Time Travel is reported as enabled only in a sandbox/test deployment.
+      tags: [FD Operations]
+      responses:
+        '200':
+          description: Current controlled date
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [businessDate, timeTravelEnabled]
+                properties:
+                  businessDate: { type: string, format: date }
+                  timeTravelEnabled: { type: boolean }
+
+  /admin/batch/runs:
+    get:
+      servers: [{ url: 'http://localhost:9090/api' }]
+      summary: Read auditable FD batch runs
+      description: ADMIN only. Returns the latest job/date claims and processing counts.
+      tags: [FD Operations]
+      responses:
+        '200':
+          description: Recent batch executions
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/BatchRun' }
+
   /opening-requests:
     post:
       summary: Submit an FD opening request
@@ -112,7 +145,7 @@ paths:
   /calculate:
     post:
       summary: Calculate an FD maturity projection
-      description: Manual-compatible calculator endpoint for any authenticated role. Category add-ons are capped by configured pricing rules.
+      description: Manual-compatible calculator endpoint for any authenticated role. The backend resolves the base rate from the product and, for customers, resolves verified category benefits from the authenticated customer identity. Client-supplied rates or categories are not accepted.
       operationId: calculateFd
       tags:
         - FD Calculator
@@ -122,16 +155,12 @@ paths:
           application/json:
             schema:
               type: object
-              required: [principal, termMonths, baseRate]
+              required: [productCode, principal, termMonths]
               properties:
+                productCode: { type: string, example: FD_STD }
                 principal: { type: number, format: double, minimum: 1000 }
                 termMonths: { type: integer, minimum: 1 }
-                baseRate: { type: number, format: double }
                 compoundingFrequency: { type: string, default: QUARTERLY }
-                calculationType: { type: string, enum: [SIMPLE, COMPOUND], default: COMPOUND }
-                categories:
-                  type: array
-                  items: { type: string }
       responses:
         '200':
           description: Maturity projection
@@ -469,6 +498,23 @@ components:
             timestamp: "2026-08-27T11:20:00"
 
   schemas:
+    BatchRun:
+      type: object
+      properties:
+        batch_id: { type: string, format: uuid }
+        job_name: { type: string }
+        business_date: { type: string, format: date }
+        status: { type: string, enum: [RUNNING, COMPLETED, FAILED] }
+        attempt_count: { type: integer }
+        records_found: { type: integer }
+        records_processed: { type: integer }
+        records_failed: { type: integer }
+        triggered_by: { type: string }
+        trigger_source: { type: string, enum: [SCHEDULED, MANUAL, TIME_TRAVEL, BOD_CATCHUP, INTERNAL] }
+        started_at: { type: string, format: date-time }
+        completed_at: { type: string, format: date-time }
+        last_error: { type: string, nullable: true }
+
     FdAccountCreateRequest:
       type: object
       required:
@@ -523,6 +569,10 @@ components:
         startDate:
           type: string
           format: date
+          description: Contract value date; defaults to the controlled Banking Date
+        payoutAccountRef:
+          type: string
+          description: Opaque account reference owned by the external Payment/Account service
 
     FdAccountResponse:
       type: object
@@ -539,6 +589,15 @@ components:
           type: string
         productCode:
           type: string
+        productVersion:
+          type: string
+          description: Immutable pricing-rule version captured at booking
+        calculationType:
+          type: string
+          enum: [COMPOUND]
+        payoutAccountRef:
+          type: string
+          description: External account reference; FD does not join to an account-service table
         currency:
           type: string
         principalAmount:
@@ -551,6 +610,9 @@ components:
           type: number
           format: double
           description: Final effective annual interest rate (%) after category add-ons and rate cap
+        dayCountConvention:
+          type: string
+          enum: [ACTUAL_365]
         tenureMonths:
           type: integer
         compoundingFrequency:
@@ -691,6 +753,23 @@ components:
         accruedInterest:
           type: number
           format: double
+          description: Accrued but not yet capitalized/paid; excluded from currentBalance
+        lastAccrualDate: { type: string, format: date }
+        lastCapitalizationDate: { type: string, format: date }
+        nextCapitalizationDate: { type: string, format: date }
+        lastPayoutDate: { type: string, format: date }
+        nextPayoutDate: { type: string, format: date }
+        prematureClosureAllowed: { type: boolean }
+        prematureClosurePenaltyPct: { type: number }
+        closureDate: { type: string, format: date }
+        closureType: { type: string }
+        closureReason: { type: string }
+        closureGrossInterest: { type: number }
+        closurePenaltyAmount: { type: number }
+        closureNetPayout: { type: number }
+        closureTransferAccountMasked: { type: string }
+        closedBy: { type: string }
+        renewalAccountNo: { type: string }
         closureDate: { type: string, format: date, nullable: true }
         closureType: { type: string, enum: [PREMATURE, MATURITY_PAYOUT, MATURITY_RENEWAL], nullable: true }
         closureReason: { type: string, nullable: true }

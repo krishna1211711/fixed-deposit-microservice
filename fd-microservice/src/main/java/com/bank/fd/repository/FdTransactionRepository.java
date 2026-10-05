@@ -17,4 +17,10 @@ public interface FdTransactionRepository extends JpaRepository<FdTransaction, Lo
     BigDecimal sumAmountByTypeAndDate(@Param("accountNo") String accountNo,
                                       @Param("date") LocalDate date,
                                       @Param("type") String type);
+
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM FdTransaction t " +
+           "WHERE t.fdAccountNo = :accountNo AND t.businessDate = :date AND t.txnType IN :types")
+    BigDecimal sumAmountByTypesAndDate(@Param("accountNo") String accountNo,
+                                       @Param("date") LocalDate date,
+                                       @Param("types") List<String> types);
 }

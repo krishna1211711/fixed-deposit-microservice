@@ -149,6 +149,8 @@ def publish_dead_letter(producer, source_topic, event, error):
 
 
 def process_event(event, producer, topic):
+    if event.get("eventType") == "FD_TRANSACTION_RECORDED":
+        return
     validate_event(event)
     if already_consumed(event["eventId"]):
         return

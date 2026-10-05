@@ -19,6 +19,12 @@ public class FdStatement {
     @Column(name = "statement_date")
     private LocalDate statementDate;
 
+    @Column(name = "period_start", nullable = false)
+    private LocalDate periodStart;
+
+    @Column(name = "period_end", nullable = false)
+    private LocalDate periodEnd;
+
     @Column(name = "opening_balance", precision = 18, scale = 3)
     private BigDecimal openingBalance;
 
@@ -37,6 +43,16 @@ public class FdStatement {
     @Column(name = "closing_balance", precision = 18, scale = 3)
     private BigDecimal closingBalance;
 
+    @Column(name = "withdrawals_payouts", precision = 18, scale = 3, nullable = false)
+    private BigDecimal withdrawalsPayouts = BigDecimal.ZERO;
+
+    @PrePersist
+    void initializePeriod() {
+        if (periodStart == null) periodStart = statementDate;
+        if (periodEnd == null) periodEnd = statementDate;
+        if (withdrawalsPayouts == null) withdrawalsPayouts = BigDecimal.ZERO;
+    }
+
     public FdStatement() {}
 
     public FdStatement(Long statementId, String fdAccountNo, LocalDate statementDate, BigDecimal openingBalance, BigDecimal interestAccrued, BigDecimal closingBalance) {
@@ -54,6 +70,10 @@ public class FdStatement {
     public void setFdAccountNo(String fdAccountNo) { this.fdAccountNo = fdAccountNo; }
     public LocalDate getStatementDate() { return statementDate; }
     public void setStatementDate(LocalDate statementDate) { this.statementDate = statementDate; }
+    public LocalDate getPeriodStart() { return periodStart; }
+    public void setPeriodStart(LocalDate periodStart) { this.periodStart = periodStart; }
+    public LocalDate getPeriodEnd() { return periodEnd; }
+    public void setPeriodEnd(LocalDate periodEnd) { this.periodEnd = periodEnd; }
     public BigDecimal getOpeningBalance() { return openingBalance; }
     public void setOpeningBalance(BigDecimal openingBalance) { this.openingBalance = openingBalance; }
     public BigDecimal getInterestAccrued() { return interestAccrued; }
@@ -66,4 +86,6 @@ public class FdStatement {
     public void setAccruedInterest(BigDecimal accruedInterest) { this.accruedInterest = accruedInterest; }
     public BigDecimal getClosingBalance() { return closingBalance; }
     public void setClosingBalance(BigDecimal closingBalance) { this.closingBalance = closingBalance; }
+    public BigDecimal getWithdrawalsPayouts() { return withdrawalsPayouts; }
+    public void setWithdrawalsPayouts(BigDecimal withdrawalsPayouts) { this.withdrawalsPayouts = withdrawalsPayouts; }
 }

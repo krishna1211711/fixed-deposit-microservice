@@ -1,48 +1,64 @@
-# Current FD Scope and Future Core-Banking Architecture
+# FD Bounded Context and Distributed Architecture
 
-## What this repository implements
+## Runtime topology
 
-This repository is the independently deployable Fixed Deposit bounded context, not a simulation of every core-banking domain inside one service.
-
-- Angular UI and API gateway with JWT role enforcement.
-- Java 21 FD service owning FD products, booked accounts, interest lifecycle, transactions, statements and operational jobs.
-- MySQL database owned only by the FD service.
-- Transactional outbox publishing versioned FD lifecycle events to Kafka.
-- Independent notification service with its own MySQL database and Mailpit delivery.
-- Independent report service that calls authenticated FD APIs and never queries FD tables.
-- CUSTOMER, BANK_OFFICER/Maker, CHECKER, ADMIN and AUDITOR roles.
-- Product administration, multi-currency rules, ACTUAL/365 daily accrual, scheduled capitalization and payout, maturity instructions, renewal, premature closure and idempotency.
-- In-module maker-checker opening, lifecycle/closure metadata, owner snapshots and an append-only operational audit trail. These remain inside the FD bounded context and do not introduce cross-service joins or foreign keys.
-
-## What must not be claimed as implemented
-
-The following are wider core-banking integrations or future services: external KYC, real savings-account debit, central GL posting, branch-manager/high-value approval, a bank-wide enterprise audit service, BOD/EOD orchestration, reconciliation, tax/TDS, transaction reversal, SMS/WhatsApp and event sourcing.
-
-The local Time Travel utility processes the FD lifecycle forward through a chosen business date. It is not historical reconstruction and is not event sourcing.
-
-## Intended integration boundaries
+This repository implements the Fixed Deposit bounded context plus small event consumers needed to demonstrate a real distributed architecture.
 
 ```text
-Customer/KYC Service ----- synchronous API or customer events -----+
-Account/Payment Service -- debit result events --------------------+-- FD Service
-Workflow Service --------- approval result events -----------------+
-                                                                  |
-                                                                  +-- FD lifecycle events --> Kafka
-                                                                                               |-- Notification
-                                                                                               |-- Audit
-                                                                                               |-- Reporting
-                                                                                               `-- Reconciliation
+Angular -> API Gateway -> FD Account Service -> FD MySQL
+                              |
+                              `-> transactional outbox -> Kafka fd.lifecycle.v1
+                                                            |-> Notification Service -> notification_db / Mailpit
+                                                            |-> Reporting Service ----> report_db
+                                                            |-> Audit Service --------> audit_db
+                                                            `-> Accounting Service ---> accounting_db
 ```
 
-`customer_id`, product identifiers owned elsewhere, settlement-account identifiers and external transaction references are integration identifiers. Cross-service database joins and cross-service foreign keys are prohibited.
+Every service owns its database. Reporting, notification, audit and accounting have no FD-database credentials and never join FD tables. Kafka delivery is at-least-once, so each consumer persists `event_id` in its own inbox before changing its local model.
 
-## Recommended future sequence
+## FD ownership
 
-1. Extract the existing in-module approval port to the team's Workflow Service when its versioned API/event contract is available.
-2. Integrate with the owning team's Customer/KYC API; do not duplicate their customer tables.
-3. Integrate with Account Service using an idempotent debit command and debit-result event before FD activation.
-4. Publish accounting commands to a central GL service while retaining the FD transaction reference.
-5. Stream the existing lifecycle/outbox events to enterprise audit and reconciliation consumers without database access.
-6. Add tax and reversal workflows only after the owning services and contracts are agreed across teams.
+The FD service owns:
 
-This preserves the current working module while giving each future capability a clean extraction and integration path.
+- opening requests and maker-checker decisions;
+- booked FD accounts and immutable contracted terms;
+- append-only FD financial transactions;
+- daily interest accrual, capitalization and payout scheduling;
+- maturity, renewal and premature closure state transitions;
+- period statements;
+- banking business date, batch claims, idempotency records and transactional outbox events.
+
+It stores `customer_id`, `product_code` and payout-account references as integration identifiers. It stores customer-name/category and product/rate/rule snapshots only as immutable evidence of the contract that was booked.
+
+## External boundaries and demo adapters
+
+Identity, Customer and Product/Pricing are independent banking capabilities. The FD core accesses Customer and Product through ports, not repositories. Two adapter modes are available:
+
+- `local-demo` keeps deterministic users, customer eligibility and products in the FD application so the college demonstration starts with one command;
+- `remote` binds the same ports to team-owned Customer and Product APIs by configuration, without changing FD business logic.
+
+Authentication and product HTTP controllers are also conditional on local mode. In a strict integrated deployment the gateway routes `/api/auth/**` to Identity Service and `/api/product/**` to Product/Pricing Service. The local master tables are demo adapters, not part of the production FD data contract and have no foreign keys to `fd_accounts`.
+
+## Reliable event flow
+
+The FD command, transaction and outbox row are written in the same local database transaction. The outbox relay publishes the versioned envelope to Kafka and retries failures. Events carry `eventId`, `eventType`, `schemaVersion`, `aggregateType`, `aggregateId`, `occurredAt`, `businessDate`, `correlationId`, `causationId` and payload data.
+
+`FD_TRANSACTION_RECORDED` is the accounting integration event. It contains the immutable reference, type, amount, currency and GL mapping; Accounting Service converts it into its own journal entry. Lifecycle events drive the reporting, notification and distributed-audit consumers. No local Spring application-event mechanism is used as a substitute for Kafka delivery.
+
+## Business date and batch safety
+
+Interest accrual, maturity and statement batches use the persistent Banking Clock rather than the host date. The Beginning-of-Day scheduler catches up every missed date sequentially and advances the clock only when that day's jobs succeed. `fd_job_executions` claims a unique job/business-date pair, records a batch UUID, initiator, source, counts and error state, and therefore acts as a database-backed distributed lock. Account/date constraints and immutable references provide a second idempotency layer.
+
+Time Travel is disabled by default. In the local sandbox it can move only forward and executes each intervening business date sequentially through the same production batch functions before advancing the Banking Clock. It is a test simulator, not event sourcing and not an ordinary banking feature.
+
+## State model
+
+An opening request has `PENDING_CHECKER`, `APPROVED`, `REJECTED` or `CANCELLED`. A booked FD aggregate then has `ACTIVE`, `CLOSED`, `PREMATURE_CLOSED` or `RENEWED`. Request/approval states are deliberately kept on the command ledger rather than pretending that an FD account exists before approval.
+
+`principal_amount` is the original deposit. `current_balance` is the interest-bearing FD balance and changes only when interest is capitalized. `accrued_interest` is a cached current total derived from immutable daily interest rows and remains outside current balance until capitalization or payout.
+
+## Intentionally external capabilities
+
+The FD module publishes payout/settlement intent and preserves references, but a real Savings/Payment Service must perform the actual customer-account debit or credit and return success/failure. Enterprise KYC, tax/TDS, bank-wide reconciliation and a real SMS/WhatsApp provider are also outside this bounded context. They must integrate by versioned APIs/events and must never receive direct FD-database access.
+
+This separation is deliberate microservice design, not unfinished FD calculation logic.

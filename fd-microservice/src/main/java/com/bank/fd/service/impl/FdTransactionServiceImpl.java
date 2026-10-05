@@ -4,12 +4,15 @@ import com.bank.fd.entity.FdTransaction;
 import com.bank.fd.repository.FdTransactionRepository;
 import com.bank.fd.repository.FdAccountRepository;
 import com.bank.fd.service.FdTransactionService;
+import com.bank.fd.service.BusinessDateService;
+import com.bank.fd.event.EventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 @Service
@@ -18,11 +21,17 @@ public class FdTransactionServiceImpl implements FdTransactionService {
 
     private final FdTransactionRepository transactionRepository;
     private final FdAccountRepository accountRepository;
+    private final BusinessDateService businessDateService;
+    private final EventPublisher eventPublisher;
 
     public FdTransactionServiceImpl(FdTransactionRepository transactionRepository,
-                                    FdAccountRepository accountRepository) {
+                                    FdAccountRepository accountRepository,
+                                    BusinessDateService businessDateService,
+                                    EventPublisher eventPublisher) {
         this.transactionRepository = transactionRepository;
         this.accountRepository = accountRepository;
+        this.businessDateService = businessDateService;
+        this.eventPublisher = eventPublisher;
     }
 
     private String currencyFor(String fdAccountNo) {
@@ -31,7 +40,7 @@ public class FdTransactionServiceImpl implements FdTransactionService {
 
     @Override
     public FdTransaction recordDeposit(String fdAccountNo, BigDecimal amount, String currency) {
-        return record(fdAccountNo, "DEPOSIT", amount, currency, LocalDate.now(),
+        return record(fdAccountNo, "DEPOSIT", amount, currency, businessDateService.currentBusinessDate(),
                 "DEPOSIT:" + fdAccountNo, "ASSET_CUSTOMER_REMITTANCE", "LIABILITY_FD_DEPOSITS", "Initial deposit");
     }
 
@@ -113,11 +122,13 @@ public class FdTransactionServiceImpl implements FdTransactionService {
         txn.setDebitGlAccount(debitGl);
         txn.setCreditGlAccount(creditGl);
         txn.setStatus("COMPLETED");
-        txn.setTxnTimestamp(LocalDateTime.now());
+        txn.setTxnTimestamp(LocalDateTime.now(ZoneOffset.UTC));
         txn.setBusinessDate(businessDate);
         txn.setReferenceId(referenceId);
         txn.setRemarks(remarks);
         txn.setUuid(UUID.randomUUID().toString());
-        return transactionRepository.save(txn);
+        FdTransaction saved = transactionRepository.save(txn);
+        eventPublisher.publishFinancialTransaction(saved);
+        return saved;
     }
 }

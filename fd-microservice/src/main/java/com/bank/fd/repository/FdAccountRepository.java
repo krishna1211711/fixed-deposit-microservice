@@ -18,6 +18,9 @@ public interface FdAccountRepository extends JpaRepository<FdAccount, String> {
     
     @Query("SELECT f FROM FdAccount f WHERE f.status = 'ACTIVE'")
     List<FdAccount> findAllActiveAccounts();
+
+    @Query("SELECT f FROM FdAccount f WHERE f.status = 'ACTIVE' OR f.closureDate = :date")
+    List<FdAccount> findAccountsForStatementDate(@Param("date") LocalDate date);
     
     @Query("SELECT f FROM FdAccount f WHERE f.status = 'ACTIVE' AND f.maturityDate <= :date")
     List<FdAccount> findMaturedAccounts(@Param("date") LocalDate date);

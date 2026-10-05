@@ -121,6 +121,7 @@ function populateProductDropdowns() {
 
   updateDynamicRatePreview();
   populateProductTerms();
+  populateCalculatorTerms();
 }
 
 function populateProductTerms() {
@@ -137,6 +138,18 @@ function populateProductTerms() {
     .map(value => `<option value="${value}" ${value === 'MATURITY' ? 'selected' : ''}>${label(value)}</option>`).join('');
 }
 
+function populateCalculatorTerms() {
+  const product = availableProducts.find(p => p.productCode === document.getElementById('calc-product')?.value)
+    || availableProducts[0];
+  const frequencies = product?.allowedCompoundingFrequencies?.length
+    ? product.allowedCompoundingFrequencies : [product?.compoundingFrequency || 'QUARTERLY'];
+  const frequencySelect = document.getElementById('calc-freq');
+  if (frequencySelect) {
+    frequencySelect.innerHTML = frequencies
+      .map(value => `<option value="${value}">${value.replaceAll('_', ' ')}</option>`).join('');
+  }
+}
+
 // Setup Event Listeners
 function setupEventListeners() {
   // Real-time calculation on form input changes
@@ -145,6 +158,7 @@ function setupEventListeners() {
     if (el) el.addEventListener('input', updateDynamicRatePreview);
   });
   document.getElementById('input-product')?.addEventListener('change', populateProductTerms);
+  document.getElementById('calc-product')?.addEventListener('change', populateCalculatorTerms);
 
   document.querySelectorAll('.category-checkbox').forEach(cb => {
     cb.addEventListener('change', updateDynamicRatePreview);
@@ -562,28 +576,26 @@ function closeStmtModal() {
 // Public Calculator Simulation
 async function handleCalculatorSubmit(e) {
   e.preventDefault();
+  if (!currentToken) {
+    showToast('Please log in to use the trusted FD calculator', 'error');
+    return;
+  }
   const principal = parseFloat(document.getElementById('calc-principal').value);
-  const baseRate = parseFloat(document.getElementById('calc-rate').value);
+  const productCode = document.getElementById('calc-product').value;
   const termMonths = parseInt(document.getElementById('calc-months').value);
   const compoundingFrequency = document.getElementById('calc-freq').value;
 
-  const categories = [];
-  if (document.getElementById('calc-cat-senior').checked) categories.push('SENIOR_CITIZEN');
-  if (document.getElementById('calc-cat-staff').checked) categories.push('STAFF');
-
   const payload = {
+    productCode,
     principal,
-    baseRate,
     termMonths,
-    compoundingFrequency,
-    categories,
-    calculationType: 'COMPOUND'
+    compoundingFrequency
   };
 
   try {
     const res = await fetch(`${API_BASE}/api/fd/calculator/simulate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
       body: JSON.stringify(payload)
     });
 

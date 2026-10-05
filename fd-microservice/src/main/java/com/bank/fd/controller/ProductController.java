@@ -10,11 +10,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import java.util.List;
 import java.util.Map;
 
 @RestController
+@ConditionalOnProperty(name = "app.integrations.product.mode", havingValue = "local-demo", matchIfMissing = true)
 @RequestMapping("/api/product")
 public class ProductController {
 

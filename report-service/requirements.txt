@@ -1,5 +1,6 @@
 matplotlib>=3.7.0
 reportlab>=4.0.0
-requests>=2.32.0,<3
 Flask>=3.1.0,<4
 gunicorn>=23.0.0,<24
+kafka-python-ng==2.2.3
+mysql-connector-python==9.4.0

@@ -8,6 +8,7 @@ import com.bank.fd.exception.ProductNotFoundException;
 import com.bank.fd.repository.ProductRepository;
 import com.bank.fd.service.ProductService;
 import org.springframework.stereotype.Service;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -17,6 +18,7 @@ import java.util.Set;
 import com.bank.fd.helper.FdBusinessRules;
 
 @Service
+@ConditionalOnProperty(name = "app.integrations.product.mode", havingValue = "local-demo", matchIfMissing = true)
 @Transactional
 public class ProductServiceImpl implements ProductService {
 

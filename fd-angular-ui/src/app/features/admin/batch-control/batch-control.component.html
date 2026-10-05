@@ -1,8 +1,22 @@
 <div class="batch-container animate-fade-in">
   <div class="header-section mb-4">
     <h2>Batch Control Panel</h2>
-    <p class="text-muted">Execute system-wide batch processes manually.</p>
+    <p class="text-muted">Run auditable, idempotent FD batch processes for the controlled banking date.</p>
   </div>
+
+  <div class="operations-summary glass-card mb-4">
+    <div>
+      <span class="summary-label">Banking business date</span>
+      <strong>{{ businessDate || 'Loading...' }}</strong>
+    </div>
+    <div>
+      <span class="summary-label">Simulation mode</span>
+      <strong>{{ timeTravelEnabled ? 'Enabled (sandbox only)' : 'Disabled' }}</strong>
+    </div>
+    <button class="btn btn-secondary" type="button" (click)="loadOperationalMetadata()">Refresh</button>
+  </div>
+
+  <p class="text-danger mb-4" *ngIf="metadataError">{{ metadataError }}</p>
 
   <div class="grid grid-cols-3 gap-4">
     <div class="glass-card text-center" *ngFor="let job of jobs">
@@ -22,5 +36,33 @@
         {{ job.result }}
       </div>
     </div>
+  </div>
+
+  <div class="glass-card mt-4">
+    <h3>Recent Batch Runs</h3>
+    <p class="text-muted">Each job/date pair is protected against duplicate execution and records its initiator and outcome.</p>
+    <div class="table-scroll" *ngIf="batchRuns.length; else noRuns">
+      <table>
+        <thead>
+          <tr>
+            <th>Business date</th><th>Job</th><th>Status</th><th>Processed</th>
+            <th>Failed</th><th>Triggered by</th><th>Source</th><th>Started (UTC)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let run of batchRuns">
+            <td>{{ run.business_date }}</td>
+            <td>{{ run.job_name }}</td>
+            <td><span class="status" [ngClass]="run.status.toLowerCase()">{{ run.status }}</span></td>
+            <td>{{ run.records_processed }} / {{ run.records_found }}</td>
+            <td>{{ run.records_failed }}</td>
+            <td>{{ run.triggered_by }}</td>
+            <td>{{ run.trigger_source }}</td>
+            <td>{{ run.started_at | date:'medium':'UTC' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <ng-template #noRuns><p class="text-muted">No batch runs have been recorded yet.</p></ng-template>
   </div>
 </div>

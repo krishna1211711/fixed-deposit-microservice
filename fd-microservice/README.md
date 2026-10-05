@@ -54,11 +54,12 @@ All secured endpoints require the HTTP header:
 - `POST /api/auth/register` — Self-register a `CUSTOMER`; elevated roles cannot be selected publicly.
 - `POST /api/auth/login` — Authenticate and receive JWT + `customerId`
 
-### 2. Public Simulation (`/api/fd/calculator`)
-- `POST /api/fd/calculator/simulate` — **Public (No Auth)**. Simulate maturity amounts, interest earned, and category rate add-ons before booking.
+### 2. Trusted Simulation (`/api/fd/calculator`)
+- `POST /api/fd/calculator/simulate` — **Authenticated**. The request supplies a product code, amount, tenure and product-permitted frequency. The backend obtains the base rate from Product and any benefit from the authenticated Customer reference; rates and categories cannot be spoofed by the browser.
 
 ### 3. FD Account Management (`/api/fd`)
-- `POST /api/fd/account/create` (`BANK_OFFICER`, `ADMIN`) — Requires `Idempotency-Key`; atomically opens the FD, books the deposit, and writes the outbox event.
+- `POST /api/fd/opening-requests` (`CUSTOMER`, `BANK_OFFICER`) — Maker submission with `Idempotency-Key`; a different `CHECKER` must approve it.
+- `POST /api/fd/account/create` (`SYSTEM` only) — Internal booking command that atomically opens the approved FD, books the deposit, and writes the outbox event.
 - `GET /api/fd/account/{fdAccountNo}` — Retrieves original principal, current balance, unsettled accrued interest, schedules, and maturity terms.
 - `GET /api/fd/accounts/my` (`CUSTOMER`) — Returns all FD accounts belonging to the authenticated customer.
 - `GET /api/fd/accounts/all` (`BANK_OFFICER`, `ADMIN`) — Lists all bank FD accounts.

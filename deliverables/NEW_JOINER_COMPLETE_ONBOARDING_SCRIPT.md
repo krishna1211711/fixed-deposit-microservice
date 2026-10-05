@@ -83,22 +83,24 @@ Angular UI :4200
   |
   v
 API Gateway :9090 -- validates JWT and routes requests
-  |                            |
-  v                            v
-FD Spring Boot service :8080   Python report service :5000
-  |                            |
-  +------------ MySQL 8 -------+
   |
-  +-- after database commit --> Kafka topic fd.lifecycle.v1
-                                   |
-                                   v
-                         Notification service :5001
-                                   |
-                                   v
-                             Mailpit SMTP/UI
+  v
+FD Spring Boot service :8080 -> fd_bank_db
+  |
+  +-- same transaction --> OUTBOX_EVENT
+                              |
+                              v
+                     Kafka topic fd.lifecycle.v1
+                       |       |       |       |
+                       v       v       v       v
+                 Notification Report  Audit  Accounting
+                 notification_db report_db audit_db accounting_db
+                       |
+                       v
+                 Mailpit SMTP/UI
 ```
 
-> “The Angular UI owns presentation and browser interaction. The gateway is the single application-facing API entry point. The Java FD service owns transactional banking rules and the primary REST API. MySQL owns durable state. Kafka decouples business transactions from notifications. The Python notification consumer can scale or fail without rolling back an already committed FD transaction. The Python report service independently creates CSV, PDF and chart outputs. Mailpit captures demonstration email without requiring a paid provider.
+> “The Angular UI owns presentation and browser interaction. The gateway is the single application-facing API entry point. The Java FD service owns transactional banking rules and the primary REST API. Each service owns a separate MySQL schema. Kafka decouples the FD transaction from notification, reporting, distributed audit and accounting projections. Every consumer can scale or fail without rolling back an already committed FD transaction. Mailpit captures demonstration email without requiring a paid provider.
 >
 > Docker Compose runs the complete local system. Kubernetes manifests show how each component can later have its own deployment, service, health probe and scaling policy. The API and report tiers can scale separately. MySQL and Kafka are stateful dependencies and would normally become managed services in production.”
 
@@ -113,7 +115,7 @@ Ports and purpose:
 | 8025 | Mailpit UI | View captured email |
 | 1025 | Mailpit SMTP | Local email delivery |
 
-> “MySQL, the report service and notification service are not published as normal host APIs in Compose. They are exposed inside the Docker network. That reduces accidental bypass of the gateway.”
+> “MySQL and the Python consumers are not published as normal host APIs in Compose. They are exposed inside the Docker network and reached through gateway routes where a user-facing API is needed. That reduces accidental bypass of the gateway.”
 
 ---
 
@@ -121,7 +123,7 @@ Ports and purpose:
 
 > “At repository root, `docker-compose.yml` describes the local distributed system. `.env.example` documents configurable secrets and database settings. `k8s/` contains deployment manifests. `docs/` contains integration, event and laboratory traceability documents. `deliverables/` contains the report, presentation, demonstration video and scripts.
 >
-> `fd-angular-ui/` is the Angular frontend. `api-gateway/` is Spring Cloud Gateway. `fd-microservice/` is the Java banking domain service. `notification-service/` is the Kafka consumer. `report-service/` is the Python export service.
+> `fd-angular-ui/` is the Angular frontend. `api-gateway/` is Spring Cloud Gateway. `fd-microservice/` is the Java banking domain service. `notification-service/`, `report-service/`, `audit-service/` and `accounting-service/` are independent Kafka consumers with their own databases.
 >
 > Inside the FD service, controllers accept HTTP requests, DTOs define request and response contracts, services contain business rules, repositories perform persistence, entities map tables, schedulers start background jobs, event classes describe lifecycle facts, helpers contain reusable financial/date rules, and Flyway migrations version the schema.”
 
@@ -194,11 +196,11 @@ Transaction meanings and simplified GL mappings:
 
 ### Supporting tables
 
-> “`fd_account_sequence` stores a branch counter and is locked during account-number generation. `notification_log` provides a delivery audit and stores Kafka event IDs so notifications are idempotent.”
+> “`fd_account_sequence` stores a branch counter and is locked during account-number generation. `fd_business_date`, `fd_job_executions`, `fd_idempotency_records` and `fd_outbox_events` provide the persistent Banking Clock, auditable batch claims, command deduplication and reliable Kafka publication. Notification delivery state belongs only to `notification_db`, not the FD schema.”
 
 ### Schema ownership
 
-> “Flyway owns schema changes. The service uses `ddl-auto=validate`, meaning Hibernate checks that entity mappings match the migrated schema but does not invent or mutate production tables. Migrations V1 through V15 create the original model and supporting features; V16 separates the realistic financial lifecycle and corrects legacy interest-credit data; V17 adds maximum deposit and product range constraints.”
+> “Flyway owns schema changes. The service uses `ddl-auto=validate`, meaning Hibernate checks that entity mappings match the migrated schema but does not invent or mutate production tables. Migrations V1 through V26 create and harden the model, including realistic accrual/settlement, constraints, maker-checker/audit, transactional outbox metadata, persistent business date and auditable batch execution.”
 
 ---
 
@@ -247,9 +249,9 @@ Demo credentials all use `admin123`: `admin` (configuration/batch), `officer1` (
 
 ## 8. Calculator sequence
 
-> “The calculator is a quotation tool, not a booking operation. `FdCalculatorComponent.calculate()` calls `FdCalculatorService.simulate()`, which posts to `/api/fd/calculator/simulate`. `FdCalculatorController.simulate()` calls `FdCalculatorServiceImpl.calculate()`.
+> “The calculator is an authenticated quotation tool, not a booking operation. `FdCalculatorComponent` first loads active products, and `calculate()` posts only product code, amount, tenure and a permitted compounding frequency to `/api/fd/calculator/simulate`. `FdCalculatorController.simulate()` derives customer identity from the JWT and calls `FdCalculatorServiceImpl.calculate()`.
 >
-> The service applies category addons: senior citizen adds 0.50 percentage points, staff adds 1.00, with the total addon capped at 2.00 for this calculator path. For SIMPLE calculation it uses principal × rate × months/12. For compound calculation it maps monthly, quarterly, half-yearly or yearly to 12, 4, 2 or 1 periods per year and computes the projected amount. It returns a simulation only; it does not create an account or ledger event.
+> The service loads the authoritative product rate and limits through `ProductService`, validates the frequency against that product, and obtains verified categories only through `CustomerReferencePort`. The client cannot submit a base rate or category. Stackability, add-on cap and maximum product rate use the same rules as account opening. The calculator maps monthly, quarterly, half-yearly or yearly to 12, 4, 2 or 1 periods per year and returns a compound projection only; it does not create an account or ledger event.
 >
 > `/api/fd/calculate` is a compatibility endpoint for the lab contract and calls the same service.”
 
@@ -274,29 +276,35 @@ User selects product
 
 User submits
   -> FdCreateComponent.onSubmit
-  -> FdAccountService.createAccount
-  -> POST /api/fd/account/create
+  -> POST /api/fd/opening-requests with Idempotency-Key
   -> Gateway JwtValidationFilter
   -> backend JwtAuthenticationFilter
-  -> FdAccountController.createAccount
+  -> FdOpeningWorkflowController.submit
+  -> FdOpeningWorkflowService.submit
+  -> PENDING_CHECKER
+
+Different CHECKER approves
+  -> FdOpeningWorkflowController.approve
+  -> FdOpeningWorkflowService.approve
+  -> internal FdAccountOpeningService.open
   -> FdAccountServiceImpl.createAccount
 ```
 
 Then narrate service internals:
 
-> “`createAccount()` first calls `productService.validateProductForFd()`. It normalizes and validates currency through `CurrencyRules`; supported currencies are INR, USD, EUR, GBP, JPY, AED and KWD, with their correct zero-, two- or three-decimal minor units. Product currency and requested currency must match.
+> “At submission and again at booking, the shared `productService.validateOpeningTerms()` method validates active product, amount, tenure, currency, permitted compounding/payout choices and maturity instruction. `CurrencyRules` supports INR, USD, EUR, GBP, JPY, AED and KWD with correct zero-, two- or three-decimal minor units. Product currency and requested currency must match.
 >
 > It gets the product’s allowed sets, validates the selected compounding frequency and payout frequency, validates the maturity instruction, chooses the explicit start date or today, and calculates maturity with `startDate.plusMonths(termMonths)`. We use calendar months, not 30-day approximations.
 >
-> It calls `InterestCalculationHelper.applyCategoryAddons()` and caps the final rate at the product maximum. This final rate is the account’s contracted snapshot.
+> It resolves the verified customer and categories through `CustomerReferencePort`; request-supplied categories are not trusted. `InterestCalculationHelper.applyCategoryAddons()` obeys the product stackability setting and cap, then caps the final rate at the product maximum. This final rate is the account’s contracted snapshot.
 >
 > It calls `AccountNumberGenerator.generate(branchCode)`. That method locks the branch sequence row using `findByBranchCodeForUpdate()`, increments the six-digit sequence, concatenates three-digit branch plus sequence, calculates digit-sum modulo 10 as a checksum, and returns the ten-digit number. Locking prevents two concurrent requests receiving the same sequence.
 >
 > The service creates `FdAccount`: principal and current balance begin equal; accrued interest is zero; status is ACTIVE; last accrual date is one day before start so start date can be accrued; next capitalization and payout dates come from real `plusMonths` calendar arithmetic; and a UUID is assigned.
 >
-> After saving the account, `FdTransactionService.recordDeposit()` creates the initial ledger row. Its reference `DEPOSIT:<account>` prevents a duplicate deposit event. Finally `EventPublisher.publishFdOpened()` announces the event.
+> After saving the account, `FdTransactionService.recordDeposit()` creates the initial ledger row. Its reference `DEPOSIT:<account>` prevents a duplicate deposit event. `EventPublisher` delegates directly to `LifecycleOutboxWriter`, which stores both `FD_TRANSACTION_RECORDED` and `FD_OPENED` outbox rows.
 >
-> The whole service method is transactional. If account saving or deposit recording fails, both roll back. In Kafka mode, the bridge only publishes after the database commit, preventing a notification about a rolled-back account.”
+> The whole service method is transactional. If account saving, deposit recording or outbox writing fails, all of it rolls back. The separate outbox relay publishes only committed rows and retries failures, so an FD cannot commit while its lifecycle event is silently lost.”
 
 Opening accounting:
 
@@ -501,9 +509,10 @@ Explain the layered idempotency model:
 ## 18. Kafka and notification sequence
 
 ```text
-Business service publishes Spring domain event
+Business service calls EventPublisher
+  -> LifecycleOutboxWriter stores the domain event in OUTBOX_EVENT in the same database transaction
   -> database transaction commits
-  -> KafkaLifecycleEventBridge @TransactionalEventListener(AFTER_COMMIT)
+  -> OutboxPublisher asynchronously publishes the committed event to Kafka
   -> serialize version 1.0 envelope
   -> Kafka topic fd.lifecycle.v1, key = fdAccountNo
   -> Python notification consumer group
@@ -515,11 +524,11 @@ Business service publishes Spring domain event
 
 > “The event envelope contains schemaVersion, UUID eventId, occurredAt, eventType, customerId, account number, currency, amount, subject and message. Account number is the Kafka key, so events for one FD maintain partition order.
 >
-> The consumer disables automatic offset commits. Before sending, it asks whether eventId already exists in `notification_log`. After successful email and audit insert, it commits the Kafka offset. A redelivered event whose audit row already exists is recognized and not emailed twice.
+> The consumer disables automatic offset commits. Before sending, it asks whether eventId already exists in its own inbox/delivery schema. After successful handling it commits the Kafka offset. A redelivered event whose inbox row already exists is recognized and not applied twice.
 >
 > Event types are FD_OPENED, INTEREST_ACCRUED, INTEREST_CAPITALIZED, INTEREST_PAID, FD_MATURED, FD_RENEWED and FD_PREMATURELY_CLOSED.
 >
-> When Kafka mode is disabled, `EventListenerHandler` handles the same Spring events asynchronously inside the Java service and `NotificationServiceImpl` uses JavaMail. Conditional configuration ensures we use either the direct listener or Kafka bridge, not both.”
+> There is no in-process Spring-event substitute for distributed EDA. The FD service always persists the outbox event; independent services consume Kafka with separate consumer groups and databases.”
 
 Why Kafka:
 
@@ -527,23 +536,15 @@ Why Kafka:
 
 Honest limitation:
 
-> “We publish after commit but do not yet use a transactional outbox. If the database commit succeeds and Kafka is unavailable at the exact publish moment, the bridge logs the failure but does not durably retry from an outbox. A production upgrade should add an outbox table and relay.”
-
-> “The demonstration consumer records a failed email as FAILED. Because deduplication currently treats any existing eventId as processed, failed delivery is audited but is not automatically retried. Production should use explicit retry state, attempt counters and a dead-letter topic. There is also a partial-failure window if SMTP accepts an email and the subsequent audit insert fails; true exactly-once email delivery is not claimed.”
+> “The outbox provides at-least-once delivery, not magical global exactly-once delivery. Consumers therefore keep idempotent inboxes, retry transient failures and can publish poison messages to dead-letter topics. External side effects such as email or a future real payment still require provider-level idempotency and reconciliation.”
 
 ---
 
 ## 19. Reporting flows
 
-### Java reports
+### Independent report service
 
-> “`ReportController` delegates to `ReportServiceImpl`. Summary reporting loads products and accounts, groups accounts by product and calculates account counts, status counts, total original principal and unsettled accrued interest. Customer portfolio takes customerId from the trusted JWT, never from an unrestricted query parameter. CSV export serializes the summary.”
-
-### Python report service
-
-> “Gateway routes `/reports/**` to the Python service after validating JWT and setting trusted role/customer headers. The service directly queries MySQL for read-only aggregation and can return CSV, PDF or a PNG customer portfolio chart. Customers may only chart their own token customerId; officers/admins may specify a customer.”
-
-> “Sharing the operational database is acceptable for this demonstration. At scale, reporting should use a read replica, warehouse or event-built read model to avoid analytic load on the transactional database.”
+> “The report service consumes lifecycle events with its own Kafka consumer group, deduplicates by event ID and updates an FD read model in `report_db`. Gateway routes `/reports/**` to it after validating JWT and setting trusted role/customer headers. It returns active versus closed/matured summaries, CSV, PDF and chart outputs without calling FD APIs or reading `fd_bank_db`.”
 
 ---
 
@@ -629,7 +630,7 @@ docker compose up --build -d
 
 ## 24. Testing strategy and evidence
 
-> “The backend currently has 34 passing automated tests with zero failures. Tests cover account-number locking/checksum, interest calculations, calendar schedules, account opening, products and limits, daily accrual separation, duplicate accrual protection, capitalization/reset, statements, maturity idempotency, withdrawals and reports. The Spring integration test loads the application with H2 for endpoint and security coverage.
+> “The Java backend currently has 43 passing automated tests with zero failures. Tests cover account-number locking/checksum, interest calculations, calendar schedules, maker-checker opening, trusted product/customer pricing, products and limits, daily accrual separation, duplicate accrual protection, capitalization/reset, statements, maturity idempotency, withdrawals, authorization and business-date simulation. The Spring integration test loads the application with H2 for endpoint and security coverage. The four Python services add 13 passing tests covering notification, reporting, audit and accounting consumers.
 >
 > Angular is verified with a production build. Docker validation applies real Flyway migrations to MySQL and runs end-to-end scenarios.”
 
@@ -672,17 +673,17 @@ End-to-end scenarios already verified:
 
 Be explicit rather than pretending this is a complete commercial bank:
 
-1. GL accounts are illustrative; there is no enterprise general-ledger service.
+1. GL accounts are illustrative; the Accounting Service projects immutable journal entries but is not a complete enterprise general ledger.
 2. Customer settlement is represented by ledger entries; no real savings/payment transfer occurs.
-3. Kafka publishing should gain a transactional outbox for guaranteed delivery.
+3. Transactional outbox delivery is at-least-once; every downstream consumer and future external provider must remain idempotent.
 4. Daily accrual customer email can be noisy; production would support notification preferences or digesting.
-5. Registration currently accepts a requested role for lab convenience; production role assignment must be administrator-controlled.
+5. Public registration permits CUSTOMER only; production privileged-role provisioning must integrate with enterprise identity governance.
 6. Gateway `RateLimiterConfig` is logging-only; production needs Redis/token-bucket enforcement.
-7. Report service currently reads the same database; production should use a replica/read model.
+7. Reporting already uses an event-built read model; production still needs retention, replay and reconciliation procedures.
 8. JWT local default and demo credentials must be replaced before any real deployment.
 9. Kafka is single-node and MySQL single-instance locally; production requires replicated managed infrastructure, backups and disaster recovery.
-10. FD opening now has an in-module maker-checker control and operational audit log. External KYC/AML, bank-wide workflow/audit, tax deduction, lien, nomination, holiday calendar and regulatory reporting remain beyond the student-project boundary and must integrate through APIs/events rather than database joins.
-11. Notification delivery is idempotent for recorded event IDs, but failed delivery needs a proper retry/dead-letter policy before production use.
+10. FD opening has maker-checker control, local operational audit and a distributed Audit consumer. External KYC/AML, tax deduction, lien, nomination, holiday calendar and regulatory reporting remain outside the FD bounded context.
+11. Notification retries and dead-letter handling are implemented for the demonstration; production still needs real provider credentials, delivery receipts and reconciliation.
 
 > “These are not hidden defects. They mark the boundary between a realistic teaching implementation and a full regulated core-banking platform.”
 
@@ -786,6 +787,6 @@ It demonstrates realistic domain separation, security, idempotency, migrations, 
 
 > “The project is built around one invariant: every financial event has one precise meaning. Opening creates principal and a deposit liability. Daily accrual recognizes expense and accrued liability without changing FD balance. Capitalization moves accrued liability into FD liability. Payout settles accrued liability externally. Maturity closes or renews exactly once according to instruction. Premature closure uses actual lifecycle state and product penalty rules.
 >
-> Technically, Angular calls a JWT-protected gateway; controllers delegate to transactional services; services validate product rules, lock aggregate rows and write normalized MySQL records; deterministic references and database constraints make operations idempotent; post-commit events go through Kafka; independent Python services deliver notifications and reports; Docker and Kubernetes keep components deployable and scalable.
+> Technically, Angular calls a JWT-protected gateway; controllers delegate to transactional services; services validate product/customer references, lock aggregate rows and atomically write normalized MySQL records plus outbox events; deterministic references and database constraints make operations idempotent; the relay publishes committed events to Kafka; independent Python services own notification, reporting, distributed-audit and accounting projections; Docker keeps components deployable and independently scalable.
 >
 > If you remember the separation between product and account, principal and current balance, accrual and capitalization, business state and append-only ledger, and synchronous money processing versus asynchronous notifications, you understand the architecture of this project.”

@@ -27,6 +27,15 @@ public class FdAccount {
     @Column(name = "product_code", nullable = false)
     private String productCode;
 
+    @Column(name = "product_version", nullable = false, length = 40)
+    private String productVersion = "LOCAL-DEMO-v1";
+
+    @Column(name = "calculation_type", nullable = false, length = 30)
+    private String calculationType = "COMPOUND";
+
+    @Column(name = "payout_account_ref", length = 80)
+    private String payoutAccountRef;
+
     @Column(name = "currency")
     private String currency = "INR";
 
@@ -169,6 +178,12 @@ public class FdAccount {
     public void setCustomerCategorySnapshot(String value) { this.customerCategorySnapshot = value; }
     public String getProductCode() { return productCode; }
     public void setProductCode(String productCode) { this.productCode = productCode; }
+    public String getProductVersion() { return productVersion; }
+    public void setProductVersion(String productVersion) { this.productVersion = productVersion; }
+    public String getCalculationType() { return calculationType; }
+    public void setCalculationType(String calculationType) { this.calculationType = calculationType; }
+    public String getPayoutAccountRef() { return payoutAccountRef; }
+    public void setPayoutAccountRef(String payoutAccountRef) { this.payoutAccountRef = payoutAccountRef; }
     public String getCurrency() { return currency; }
     public void setCurrency(String currency) { this.currency = currency; }
     public BigDecimal getPrincipalAmount() { return principalAmount; }

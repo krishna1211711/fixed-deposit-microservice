@@ -3,8 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { FdCalculatorService } from '../../core/services/fd-calculator.service';
-import { FdSimulationRequest, FdSimulationResponse } from '../../core/models/models';
+import { FdSimulationRequest, FdSimulationResponse, Product } from '../../core/models/models';
 import { CurrencyFormatPipe } from '../../shared/pipes/currency-format.pipe';
+import { ProductService } from '../../core/services/product.service';
 
 @Component({
   selector: 'app-fd-calculator',
@@ -15,19 +16,13 @@ import { CurrencyFormatPipe } from '../../shared/pipes/currency-format.pipe';
 })
 export class FdCalculatorComponent implements OnInit {
   request: FdSimulationRequest = {
+    productCode: '',
     principal: 100000,
     termMonths: 12,
-    baseRate: 5.5,
-    compoundingFrequency: 'QUARTERLY',
-    calculationType: 'COMPOUND',
-    categories: []
+    compoundingFrequency: 'QUARTERLY'
   };
 
-  categoryOptions = [
-    { value: 'SENIOR_CITIZEN', label: 'fdCalc.seniorCitizen' },
-    { value: 'BANK_EMPLOYEE', label: 'fdCalc.employee' },
-    { value: 'PREMIUM_CUSTOMER', label: 'fdCalc.premium' }
-  ];
+  products: Product[] = [];
 
   result: FdSimulationResponse | null = null;
   loading = false;
@@ -35,23 +30,28 @@ export class FdCalculatorComponent implements OnInit {
 
   constructor(
     private calculatorService: FdCalculatorService,
+    private productService: ProductService,
     private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
-    this.calculate();
+    this.productService.getProducts('FD', 'ACTIVE').subscribe(products => {
+      this.products = products;
+      if (products.length > 0) {
+        this.request.productCode = products[0].productCode;
+        this.request.compoundingFrequency = products[0].compoundingFrequency;
+        this.calculate();
+      }
+    });
   }
 
-  toggleCategory(event: any, category: string) {
-    if (event.target.checked) {
-      this.request.categories.push(category);
-    } else {
-      this.request.categories = this.request.categories.filter(c => c !== category);
-    }
+  get selectedProduct(): Product | undefined {
+    return this.products.find(product => product.productCode === this.request.productCode);
   }
 
-  isCategorySelected(category: string): boolean {
-    return this.request.categories.includes(category);
+  productChanged() {
+    const product = this.selectedProduct;
+    if (product) this.request.compoundingFrequency = product.compoundingFrequency;
   }
 
   calculate() {

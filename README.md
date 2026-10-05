@@ -7,25 +7,25 @@ A lab-ready and extensible fixed-deposit platform built as independently deploya
 ```text
 Angular UI :4200
        |
-API Gateway :9090 ---- JWT validation and routing
-       |                         |
-FD Service :8080          Report Service :5000
-       |                  (FD APIs only; no DB access)
-FD MySQL (accounts, ledger, outbox)
+API Gateway :9090 ---- JWT validation, correlation ID and routing
        |
-Kafka :9092 ---> Notification Service :5001 ---> Notification MySQL
-                                      |
-                               Mailpit SMTP :1025
+FD Service :8080 ---> FD MySQL (FD aggregates, ledger, batches, outbox)
+       |
+Outbox Relay ---> Kafka :9092
+                    |---> Notification Service :5001 ---> notification_db / Mailpit
+                    |---> Reporting Service :5000 ------> report_db
+                    |---> Audit Service :5002 ----------> audit_db
+                    `---> Accounting Service :5003 -----> accounting_db
 ```
 
-Each deployable service has its own Dockerfile and data boundary. The report service calls authenticated FD APIs and never queries FD tables. The notification service consumes Kafka and owns a separate MySQL database. `customer_id` and `product_code` are external references in `fd_accounts`, not cross-service foreign keys.
+Each deployable service has its own Dockerfile and data boundary. The four consumers build their own idempotent state from Kafka and have no FD-database credentials. `customer_id`, `product_code` and payout-account references are external identifiers in `fd_accounts`, not cross-service foreign keys. Configurable ports bind Customer and Product/Pricing to either deterministic local-demo adapters or separately deployed team services.
 
 ## Technology stack
 
 - Java 21 LTS, Spring Boot 3.5, Spring Security, JPA, Flyway
 - Spring Cloud Gateway and JWT bearer authentication
 - Angular 21 with route guards, interceptors, and English and Hindi resources
-- Python 3.10, Flask, Requests, ReportLab, and Matplotlib
+- Python 3.10, Flask, Kafka clients, MySQL Connector, ReportLab, and Matplotlib
 - Apache Kafka 3.9, MySQL 8, Docker Compose, and Kubernetes
 - Mailpit for free local email demonstrations
 
@@ -45,6 +45,7 @@ Open:
 - FD API Swagger: http://localhost:8080/swagger-ui.html
 - Captured email inbox: http://localhost:8025
 - Report service health through gateway: http://localhost:9090/reports/health
+- Distributed audit health through gateway: http://localhost:9090/distributed-audit/health
 
 Demo users all use password `admin123`:
 
@@ -66,9 +67,10 @@ Stop the stack with `docker compose down`. Add `-v` only when you intentionally 
 - CUSTOMER, BANK_OFFICER/Maker, CHECKER, ADMIN, and AUDITOR authorization boundaries with segregation of duties
 - Owner snapshots, explicit ACTIVE/CLOSED/PREMATURE_CLOSED/RENEWED lifecycle, closure facts, and append-only audit records
 - Protected Angular product-management screen for product limits, currencies, rates, frequencies, penalties, and premature-closure policy
-- JSON and CSV reports in Spring plus CSV, PDF, and chart exports in the Python report service
+- Event-projected JSON, CSV, PDF, and chart reports from a dedicated reporting database
+- Independent Kafka-driven audit and accounting services with consumer inbox deduplication
 - Versioned Kafka lifecycle events, transactional outbox relay, consumer inbox, retry/DLQ handling, and local Mailpit delivery
-- Single distributed claim per scheduled job/business date, plus account-level duplicate protection
+- Persistent Banking Clock, automatic Beginning-of-Day catch-up, auditable batch-run metadata, single distributed claim per job/business date, and account-level duplicate protection
 - ISO 4217 handling for INR, USD, EUR, GBP, JPY, AED, and KWD, including 0-, 2-, and 3-decimal currencies
 - English and Hindi UI resources
 - Health endpoints and container orchestration files
@@ -87,7 +89,10 @@ Stop the stack with `docker compose down`. Add `-v` only when you intentionally 
 | Premature closure | `POST /api/fd/account/withdraw` |
 | Manual maturity close | `POST /api/fd/account/manual-close` |
 | Batch controls | `POST /api/admin/batch/*` |
+| Banking date and run history | `GET /api/admin/business-date`, `GET /api/admin/batch/runs` |
 | Audit trail | `GET /api/audit/recent` (ADMIN/AUDITOR) |
+| Distributed event audit | `GET /distributed-audit/events` through gateway |
+| Accounting journal | `GET /accounting/entries` through gateway (ADMIN/AUDITOR) |
 | Reports | `GET /api/report/*` and `GET /reports/*` through the gateway |
 | Customer portfolio CSV | `GET /api/report/customer-portfolio/export/csv` |
 
@@ -116,7 +121,7 @@ The Angular development server proxies `/api` to the gateway at port 9090. Produ
 
 Copy `.env.example` to `.env` only when changing local defaults. Never commit `.env` or `k8s/secret.yaml`. Kubernetes uses [k8s/secret.example.yaml](k8s/secret.example.yaml) as a template.
 
-No paid service is required for the college demonstration. Cloud, real SMTP, SMS, and WhatsApp credentials are deliberately not needed. The time-travel simulator is disabled by default and explicitly enabled only in the local Docker demonstration. If the project is deployed later, supply a managed database connection, a random JWT secret, container registry access, and an optional email provider through environment variables.
+No paid service is required for the college demonstration. Cloud, real SMTP, SMS, and WhatsApp credentials are deliberately not needed. The time-travel simulator is disabled by default and explicitly enabled only in the local Docker demonstration; it advances the Banking Clock one day at a time through the real batch functions. If the project is deployed later, supply managed service databases, a secured Kafka cluster, a random JWT secret, container registry access, team Identity/Customer/Product endpoints, and an optional email provider through environment variables.
 
 ## Project deliverables
 

@@ -4,12 +4,11 @@ import com.bank.fd.domain.OpeningRequestStatus;
 import com.bank.fd.dto.request.FdAccountCreateRequest;
 import com.bank.fd.dto.response.FdAccountResponse;
 import com.bank.fd.dto.response.FdOpeningRequestResponse;
-import com.bank.fd.entity.CustomerProfile;
+import com.bank.fd.integration.CustomerReferencePort;
 import com.bank.fd.entity.FdOpeningRequest;
 import com.bank.fd.event.EventPublisher;
 import com.bank.fd.exception.IdempotencyConflictException;
 import com.bank.fd.exception.InvalidOperationException;
-import com.bank.fd.repository.CustomerProfileRepository;
 import com.bank.fd.repository.FdOpeningRequestRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,12 +24,11 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.Arrays;
 
 @Service
 public class FdOpeningWorkflowService {
     private final FdOpeningRequestRepository repository;
-    private final CustomerProfileRepository customerRepository;
+    private final CustomerReferencePort customerReferencePort;
     private final ProductService productService;
     private final FdAccountOpeningService openingService;
     private final AuditTrailService auditTrail;
@@ -38,14 +36,14 @@ public class FdOpeningWorkflowService {
     private final ObjectMapper objectMapper;
 
     public FdOpeningWorkflowService(FdOpeningRequestRepository repository,
-                                    CustomerProfileRepository customerRepository,
+                                    CustomerReferencePort customerReferencePort,
                                     ProductService productService,
                                     FdAccountOpeningService openingService,
                                     AuditTrailService auditTrail,
                                     EventPublisher eventPublisher,
                                     ObjectMapper objectMapper) {
         this.repository = repository;
-        this.customerRepository = customerRepository;
+        this.customerReferencePort = customerReferencePort;
         this.productService = productService;
         this.openingService = openingService;
         this.auditTrail = auditTrail;
@@ -66,12 +64,10 @@ public class FdOpeningWorkflowService {
         } else if (!"BANK_OFFICER".equals(role)) {
             throw new InvalidOperationException("Only customers and bank-officer makers may submit FD requests");
         }
-        CustomerProfile customer = customerRepository.findByCustomerId(request.getCustomerId())
-                .orElseThrow(() -> new InvalidOperationException("Customer reference does not exist: " + request.getCustomerId()));
+        var customer = customerReferencePort.getVerifiedCustomer(request.getCustomerId());
         // Eligibility categories are authoritative customer-profile data, never a client-selected rate override.
-        request.setCategories(customer.getCategory() == null ? List.of() : Arrays.stream(customer.getCategory().split("[,;]"))
-                .map(String::trim).filter(value -> !value.isBlank()).distinct().toList());
-        productService.validateProductForFd(request.getProductCode(), request.getTermMonths(), request.getPrincipalAmount());
+        request.setCategories(customer.verifiedCategories());
+        productService.validateOpeningTerms(request);
         String json = serialize(request);
         String hash = hash(json);
         FdOpeningRequest existing = repository.findByIdempotencyKey(idempotencyKey).orElse(null);
@@ -89,7 +85,7 @@ public class FdOpeningWorkflowService {
         entity.setRequesterUsername(username);
         entity.setRequesterRole(role);
         entity.setCustomerId(request.getCustomerId());
-        entity.setCustomerNameSnapshot(customer.getFullName());
+        entity.setCustomerNameSnapshot(customer.fullName());
         entity.setProductCode(request.getProductCode());
         entity.setPrincipalAmount(request.getPrincipalAmount());
         entity.setCurrency(request.getCurrency() == null ? "INR" : request.getCurrency());
@@ -101,7 +97,8 @@ public class FdOpeningWorkflowService {
                 entity.getRequestId(), "SUCCESS", Map.of("customerId", entity.getCustomerId(),
                         "productCode", entity.getProductCode(), "amount", entity.getPrincipalAmount()));
         eventPublisher.publishOpeningWorkflow("FD_CREATION_REQUESTED", entity.getRequestId(),
-                entity.getCustomerId(), entity.getProductCode(), entity.getPrincipalAmount(), entity.getStatus());
+                entity.getCustomerId(), entity.getProductCode(), entity.getPrincipalAmount(), entity.getCurrency(),
+                entity.getStatus());
         return response(entity);
     }
 
@@ -131,7 +128,8 @@ public class FdOpeningWorkflowService {
         auditTrail.record(checker, "CHECKER", "FD_OPENING_APPROVED", "FD_OPENING_REQUEST",
                 requestId, "SUCCESS", Map.of("fdAccountNo", account.getFdAccountNo()));
         eventPublisher.publishOpeningWorkflow("FD_CREATION_APPROVED", entity.getRequestId(),
-                entity.getCustomerId(), entity.getProductCode(), entity.getPrincipalAmount(), entity.getStatus());
+                entity.getCustomerId(), entity.getProductCode(), entity.getPrincipalAmount(), entity.getCurrency(),
+                entity.getStatus());
         return response(entity);
     }
 
@@ -147,7 +145,8 @@ public class FdOpeningWorkflowService {
         auditTrail.record(checker, "CHECKER", "FD_OPENING_REJECTED", "FD_OPENING_REQUEST",
                 requestId, "SUCCESS", Map.of("reason", reason));
         eventPublisher.publishOpeningWorkflow("FD_CREATION_REJECTED", entity.getRequestId(),
-                entity.getCustomerId(), entity.getProductCode(), entity.getPrincipalAmount(), entity.getStatus());
+                entity.getCustomerId(), entity.getProductCode(), entity.getPrincipalAmount(), entity.getCurrency(),
+                entity.getStatus());
         return response(entity);
     }
 

@@ -22,3 +22,26 @@
 }
 
 .text-success { color: var(--accent); }
+
+.operations-summary {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.operations-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.operations-summary button { margin-left: auto; }
+.summary-label { color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 900px; }
+th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid rgba(148, 163, 184, 0.2); }
+th { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; }
+.status { font-weight: 600; }
+.status.completed { color: var(--accent); }
+.status.failed { color: var(--danger, #ef4444); }

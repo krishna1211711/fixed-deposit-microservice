@@ -1,19 +1,17 @@
 package com.bank.fd.event;
 
-import org.springframework.context.ApplicationEvent;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-public class FDRenewedEvent extends ApplicationEvent {
+public class FDRenewedEvent {
     private final String fdAccountNo;
     private final String renewalAccountNo;
     private final String customerId;
     private final BigDecimal amount;
     private final LocalDate renewalDate;
 
-    public FDRenewedEvent(Object source, String fdAccountNo, String renewalAccountNo,
+    public FDRenewedEvent(String fdAccountNo, String renewalAccountNo,
                           String customerId, BigDecimal amount, LocalDate renewalDate) {
-        super(source);
         this.fdAccountNo = fdAccountNo;
         this.renewalAccountNo = renewalAccountNo;
         this.customerId = customerId;

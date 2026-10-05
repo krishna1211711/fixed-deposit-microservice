@@ -8,7 +8,7 @@ Approximate duration: 75 seconds.
 4. **Accounts:** Show the customer's FD list, lifecycle status, transactions, and statements.
 5. **Maker-checker workflow:** Sign in as `officer1` and submit an opening request. Sign in as `checker1`; approve it and show that account/deposit creation occurs only after the independent decision.
 6. **Admin controls:** Sign in as `admin`. Show that Create FD is absent, configure product stackability, then trigger daily interest and statement generation. Explain that repeated daily runs are idempotent and audited; time travel is local test simulation only.
-7. **Reports:** Show the customer portfolio CSV and protected officer/admin summary reports. The independent Python report service calls FD APIs and never reads FD tables directly.
+7. **Reports:** Show active versus closed/matured portfolios, CSV/PDF export and charts. The independent Python report service consumes Kafka events into `report_db`; it neither calls FD APIs nor reads FD tables.
 8. **Kafka notification:** Open Mailpit at `http://localhost:8025`. Explain that the FD service publishes a versioned lifecycle event only after the database transaction commits. The independent notification service consumes it, records an idempotent audit row, and sends the email.
 9. **Audit and architecture close:** Sign in as `auditor1`, show the audit trail, and mention the nine-container Docker demo, Kubernetes manifests/HPAs, and that new Kafka consumers—analytics, enterprise audit, or fraud—can be added without changing the FD transaction service.
 

@@ -11,6 +11,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.UUID;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Supplier;
 
 @Service
 public class JobExecutionCoordinator {
@@ -25,53 +29,85 @@ public class JobExecutionCoordinator {
     }
 
     public boolean executeOnce(String jobName, LocalDate businessDate, Runnable work) {
-        if (!claim(jobName, businessDate)) {
+        return executeOnce(jobName, businessDate, "SYSTEM", "INTERNAL", () -> {
+            work.run();
+            return BatchWorkResult.completed(0, 0);
+        }).executed();
+    }
+
+    public BatchExecutionResult executeOnce(String jobName, LocalDate businessDate,
+                                             String triggeredBy, String triggerSource,
+                                             Supplier<BatchWorkResult> work) {
+        String batchId = claim(jobName, businessDate, triggeredBy, triggerSource);
+        if (batchId == null) {
             log.info("Skipping duplicate job execution: job={}, businessDate={}", jobName, businessDate);
-            return false;
+            return new BatchExecutionResult(null, jobName, businessDate, "SKIPPED_DUPLICATE",
+                    false, 0, 0, 0);
         }
         try {
-            work.run();
-            finish(jobName, businessDate, "COMPLETED", null);
-            return true;
+            BatchWorkResult result = work.get();
+            finish(batchId, "COMPLETED", result, null);
+            return new BatchExecutionResult(batchId, jobName, businessDate, "COMPLETED", true,
+                    result.recordsFound(), result.recordsProcessed(), result.recordsFailed());
         } catch (RuntimeException error) {
-            finish(jobName, businessDate, "FAILED", error.getMessage());
+            finish(batchId, "FAILED", new BatchWorkResult(0, 0, 1), error.getMessage());
             throw error;
         }
     }
 
-    private boolean claim(String jobName, LocalDate businessDate) {
-        Boolean claimed = transactionTemplate.execute(status -> {
+    private String claim(String jobName, LocalDate businessDate, String triggeredBy, String triggerSource) {
+        return transactionTemplate.execute(status -> {
             LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+            String batchId = UUID.randomUUID().toString();
             try {
                 jdbcTemplate.update("""
                         INSERT INTO fd_job_executions
-                            (job_name, business_date, status, attempt_count, started_at)
-                        VALUES (?, ?, 'RUNNING', 1, ?)
-                        """, jobName, businessDate, now);
-                return true;
+                            (job_name, business_date, status, attempt_count, started_at, batch_id,
+                             records_found, records_processed, records_failed, triggered_by, trigger_source)
+                        VALUES (?, ?, 'RUNNING', 1, ?, ?, 0, 0, 0, ?, ?)
+                        """, jobName, businessDate, now, batchId, safeActor(triggeredBy), triggerSource);
+                return batchId;
             } catch (DuplicateKeyException duplicate) {
                 int updated = jdbcTemplate.update("""
                         UPDATE fd_job_executions
                            SET status = 'RUNNING', attempt_count = attempt_count + 1,
-                               started_at = ?, completed_at = NULL, last_error = NULL
+                               started_at = ?, completed_at = NULL, last_error = NULL,
+                               batch_id = ?, records_found = 0, records_processed = 0, records_failed = 0,
+                               triggered_by = ?, trigger_source = ?
                          WHERE job_name = ? AND business_date = ? AND status = 'FAILED'
-                        """, now, jobName, businessDate);
-                return updated == 1;
+                        """, now, batchId, safeActor(triggeredBy), triggerSource, jobName, businessDate);
+                return updated == 1 ? batchId : null;
             }
         });
-        return Boolean.TRUE.equals(claimed);
     }
 
-    private void finish(String jobName, LocalDate businessDate, String status, String error) {
+    private void finish(String batchId, String status, BatchWorkResult result, String error) {
         transactionTemplate.executeWithoutResult(transactionStatus -> jdbcTemplate.update("""
                 UPDATE fd_job_executions
-                   SET status = ?, completed_at = ?, last_error = ?
-                 WHERE job_name = ? AND business_date = ?
-                """, status, LocalDateTime.now(ZoneOffset.UTC), abbreviate(error), jobName, businessDate));
+                   SET status = ?, completed_at = ?, last_error = ?, records_found = ?,
+                       records_processed = ?, records_failed = ?
+                 WHERE batch_id = ?
+                """, status, LocalDateTime.now(ZoneOffset.UTC), abbreviate(error),
+                result.recordsFound(), result.recordsProcessed(), result.recordsFailed(), batchId));
+    }
+
+    private String safeActor(String value) {
+        return value == null || value.isBlank() ? "SYSTEM" : value.substring(0, Math.min(100, value.length()));
     }
 
     private String abbreviate(String value) {
         if (value == null || value.length() <= 1000) return value;
         return value.substring(0, 1000);
+    }
+
+    public List<Map<String, Object>> recentRuns() {
+        return jdbcTemplate.queryForList("""
+                SELECT batch_id, job_name, business_date, status, attempt_count,
+                       records_found, records_processed, records_failed,
+                       triggered_by, trigger_source, started_at, completed_at, last_error
+                  FROM fd_job_executions
+                 ORDER BY started_at DESC
+                 LIMIT 100
+                """);
     }
 }

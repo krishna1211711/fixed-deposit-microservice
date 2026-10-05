@@ -9,4 +9,6 @@ import java.util.Optional;
 public interface FdStatementRepository extends JpaRepository<FdStatement, Long> {
     List<FdStatement> findByFdAccountNoOrderByStatementDateDesc(String fdAccountNo);
     Optional<FdStatement> findByFdAccountNoAndStatementDate(String fdAccountNo, LocalDate statementDate);
+    Optional<FdStatement> findFirstByFdAccountNoAndStatementDateBeforeOrderByStatementDateDesc(
+            String fdAccountNo, LocalDate statementDate);
 }

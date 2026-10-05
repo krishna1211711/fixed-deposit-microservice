@@ -1,19 +1,16 @@
 package com.bank.fd.event;
 
-import org.springframework.context.ApplicationEvent;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-public class InterestAccruedEvent extends ApplicationEvent {
+public class InterestAccruedEvent {
 
     private final String fdAccountNo;
     private final String customerId;
     private final BigDecimal interestAmount;
     private final LocalDate accrualDate;
 
-    public InterestAccruedEvent(Object source, String fdAccountNo, String customerId, BigDecimal interestAmount, LocalDate accrualDate) {
-        super(source);
+    public InterestAccruedEvent(String fdAccountNo, String customerId, BigDecimal interestAmount, LocalDate accrualDate) {
         this.fdAccountNo = fdAccountNo;
         this.customerId = customerId;
         this.interestAmount = interestAmount;

@@ -25,10 +25,37 @@ spring:
               filters:
                 - JwtValidationFilter
                 - StripPrefix=1
+            - id: distributed-audit-route
+              uri: ${AUDIT_SERVICE_URI:http://localhost:5002}
+              predicates:
+                - Path=/distributed-audit/**
+              filters:
+                - JwtValidationFilter
+                - StripPrefix=1
+            - id: accounting-route
+              uri: ${ACCOUNTING_SERVICE_URI:http://localhost:5003}
+              predicates:
+                - Path=/accounting/**
+              filters:
+                - JwtValidationFilter
+                - StripPrefix=1
             - id: auth-route
-              uri: ${FD_SERVICE_URI:http://localhost:8080}
+              uri: ${IDENTITY_SERVICE_URI:http://localhost:8080}
               predicates:
                 - Path=/api/auth/**
+            - id: product-route
+              uri: ${PRODUCT_SERVICE_URI:http://localhost:8080}
+              predicates:
+                - Path=/api/product/**
+              filters:
+                - JwtValidationFilter
+            - id: report-api-route
+              uri: ${REPORT_SERVICE_URI:http://localhost:5000}
+              predicates:
+                - Path=/api/report/**
+              filters:
+                - JwtValidationFilter
+                - StripPrefix=2
             - id: api-route
               uri: ${FD_SERVICE_URI:http://localhost:8080}
               predicates:

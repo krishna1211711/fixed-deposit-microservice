@@ -1,25 +1,25 @@
 asyncapi: 3.0.0
 info:
-  title: Fixed Deposit Lifecycle Events
-  version: 1.0.0
-  description: Versioned events emitted by the FD account service through its transactional outbox.
+  title: Fixed Deposit Domain Events
+  version: 1.1.0
+  description: Versioned at-least-once events emitted through the FD transactional outbox. Consumers must deduplicate by eventId.
 defaultContentType: application/json
 channels:
   fdLifecycle:
     address: fd.lifecycle.v1
     messages:
-      lifecycleEvent:
-        $ref: '#/components/messages/FdLifecycleEvent'
+      fdDomainEvent:
+        $ref: '#/components/messages/FdDomainEvent'
   fdLifecycleDeadLetter:
     address: fd.lifecycle.v1.dlq
     messages:
-      failedLifecycleEvent:
-        $ref: '#/components/messages/FailedFdLifecycleEvent'
+      failedFdDomainEvent:
+        $ref: '#/components/messages/FailedFdDomainEvent'
 operations:
-  publishLifecycleEvent:
+  publishFdDomainEvent:
     action: send
     channel: { $ref: '#/channels/fdLifecycle' }
-  consumeLifecycleEvent:
+  consumeFdDomainEvent:
     action: receive
     channel: { $ref: '#/channels/fdLifecycle' }
   publishDeadLetter:
@@ -27,11 +27,11 @@ operations:
     channel: { $ref: '#/channels/fdLifecycleDeadLetter' }
 components:
   messages:
-    FdLifecycleEvent:
-      name: FdLifecycleEvent
-      payload: { $ref: '#/components/schemas/FdLifecycleEvent' }
-    FailedFdLifecycleEvent:
-      name: FailedFdLifecycleEvent
+    FdDomainEvent:
+      name: FdDomainEvent
+      payload: { $ref: '#/components/schemas/FdDomainEvent' }
+    FailedFdDomainEvent:
+      name: FailedFdDomainEvent
       payload:
         type: object
         required: [sourceTopic, failedAt, error, event]
@@ -39,48 +39,53 @@ components:
           sourceTopic: { type: string }
           failedAt: { type: string, format: date-time }
           error: { type: string, maxLength: 1000 }
-          event: { $ref: '#/components/schemas/FdLifecycleEvent' }
+          event: { $ref: '#/components/schemas/FdDomainEvent' }
   schemas:
-    FdLifecycleEvent:
+    FdDomainEvent:
       type: object
       additionalProperties: true
-      required:
-        - schemaVersion
-        - eventId
-        - correlationId
-        - producer
-        - occurredAt
-        - eventType
-        - aggregateType
-        - aggregateId
-        - customerId
-        - fdAccountNo
-        - currency
-        - amount
-        - businessDate
-        - subject
-        - messageBody
+      required: [schemaVersion, eventId, correlationId, producer, occurredAt, eventType, aggregateType, aggregateId]
       properties:
         schemaVersion: { type: string, const: '1.0' }
         eventId: { type: string, format: uuid }
-        correlationId: { type: string }
+        correlationId: { type: string, description: End-to-end request or batch correlation identifier }
         causationId: { type: [string, 'null'] }
         producer: { type: string, const: fd-account-service }
         occurredAt: { type: string, format: date-time }
         eventType:
           type: string
-          enum: [FD_OPENED, INTEREST_ACCRUED, INTEREST_CAPITALIZED, INTEREST_PAID, FD_MATURED, FD_RENEWED, FD_PREMATURELY_CLOSED]
-        aggregateType: { type: string, const: FD_ACCOUNT }
+          enum:
+            - FD_CREATION_REQUESTED
+            - FD_CREATION_APPROVED
+            - FD_CREATION_REJECTED
+            - FD_OPENED
+            - INTEREST_ACCRUED
+            - INTEREST_CAPITALIZED
+            - INTEREST_PAID
+            - FD_MATURED
+            - FD_RENEWED
+            - FD_PREMATURELY_CLOSED
+            - FD_TRANSACTION_RECORDED
+        aggregateType:
+          type: string
+          enum: [FD_OPENING_REQUEST, FD_ACCOUNT, FD_TRANSACTION]
         aggregateId: { type: string }
-        customerId: { type: string }
-        fdAccountNo: { type: string }
+        customerId: { type: [string, 'null'] }
+        fdAccountNo: { type: [string, 'null'] }
         productCode: { type: [string, 'null'] }
-        currency: { type: string, pattern: '^[A-Z]{3}$' }
-        amount: { type: number }
-        businessDate: { type: string, format: date }
+        currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
+        amount: { type: [number, 'null'] }
+        businessDate: { type: [string, 'null'], format: date }
         status: { type: [string, 'null'] }
         principalAmount: { type: [number, 'null'] }
         currentBalance: { type: [number, 'null'] }
         accruedInterest: { type: [number, 'null'] }
-        subject: { type: string }
-        messageBody: { type: string }
+        interestRate: { type: [number, 'null'] }
+        tenureMonths: { type: [integer, 'null'] }
+        maturityDate: { type: [string, 'null'], format: date }
+        transactionType: { type: [string, 'null'] }
+        transactionReference: { type: [string, 'null'] }
+        debitGlAccount: { type: [string, 'null'] }
+        creditGlAccount: { type: [string, 'null'] }
+        subject: { type: [string, 'null'] }
+        messageBody: { type: [string, 'null'] }

@@ -1,6 +1,7 @@
 package com.bank.fd.service;
 
 import com.bank.fd.dto.request.ProductRequest;
+import com.bank.fd.dto.request.FdAccountCreateRequest;
 import com.bank.fd.dto.response.ApiResponse;
 import com.bank.fd.entity.Product;
 import com.bank.fd.exception.InvalidOperationException;
@@ -17,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -47,6 +49,10 @@ class ProductServiceTest {
         sampleProduct.setMinDeposit(new BigDecimal("10000.00"));
         sampleProduct.setRateCapAddon(new BigDecimal("1.00"));
         sampleProduct.setPreMaturityPenaltyPct(new BigDecimal("1.00"));
+        sampleProduct.setCurrency("INR");
+        sampleProduct.setCompoundingFrequency("QUARTERLY");
+        sampleProduct.setAllowedCompoundingFrequencies(Set.of("MONTHLY", "QUARTERLY"));
+        sampleProduct.setAllowedPayoutFrequencies(Set.of("MATURITY"));
     }
 
     @Test
@@ -122,5 +128,20 @@ class ProductServiceTest {
 
         assertThrows(InvalidOperationException.class, () ->
                 productService.validateProductForFd("FD_STD", 12, new BigDecimal("20000.00")));
+    }
+
+    @Test
+    void openingTermsRejectCurrencyMismatchBeforeMakerRequestIsStored() {
+        when(productRepository.findByProductCode("FD_STD")).thenReturn(Optional.of(sampleProduct));
+        FdAccountCreateRequest request = new FdAccountCreateRequest();
+        request.setProductCode("FD_STD");
+        request.setPrincipalAmount(new BigDecimal("20000.00"));
+        request.setTermMonths(12);
+        request.setCurrency("USD");
+        request.setCompoundingFrequency("QUARTERLY");
+        request.setPayoutFrequency("MATURITY");
+        request.setMaturityInstruction("PAYOUT");
+
+        assertThrows(InvalidOperationException.class, () -> productService.validateOpeningTerms(request));
     }
 }

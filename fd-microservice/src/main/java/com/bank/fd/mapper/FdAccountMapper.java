@@ -25,6 +25,9 @@ public class FdAccountMapper {
         res.setCustomerName(account.getCustomerNameSnapshot());
         res.setCustomerCategory(account.getCustomerCategorySnapshot());
         res.setProductCode(account.getProductCode());
+        res.setProductVersion(account.getProductVersion());
+        res.setCalculationType(account.getCalculationType());
+        res.setPayoutAccountRef(account.getPayoutAccountRef());
         res.setCurrency(account.getCurrency());
         res.setPrincipalAmount(account.getPrincipalAmount());
         res.setCurrentBalance(account.getCurrentBalance() != null

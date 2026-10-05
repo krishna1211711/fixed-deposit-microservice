@@ -35,6 +35,7 @@ public class FdAccountCreateRequest {
     private String payoutFrequency = "MATURITY";
     private String maturityInstruction = "PAYOUT";
     private java.time.LocalDate startDate;
+    private String payoutAccountRef;
 
     public FdAccountCreateRequest() {}
 
@@ -66,4 +67,6 @@ public class FdAccountCreateRequest {
     public void setMaturityInstruction(String maturityInstruction) { this.maturityInstruction = maturityInstruction; }
     public java.time.LocalDate getStartDate() { return startDate; }
     public void setStartDate(java.time.LocalDate startDate) { this.startDate = startDate; }
+    public String getPayoutAccountRef() { return payoutAccountRef; }
+    public void setPayoutAccountRef(String payoutAccountRef) { this.payoutAccountRef = payoutAccountRef; }
 }

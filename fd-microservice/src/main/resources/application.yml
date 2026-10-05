@@ -27,6 +27,16 @@ spring:
         enable.idempotence: true
 
 app:
+  business-time-zone: ${BANKING_TIME_ZONE:Asia/Kolkata}
+  integrations:
+    identity:
+      mode: ${IDENTITY_INTEGRATION_MODE:local-demo}
+    customer:
+      mode: ${CUSTOMER_INTEGRATION_MODE:local-demo}
+      base-url: ${CUSTOMER_SERVICE_URL:http://localhost:8081}
+    product:
+      mode: ${PRODUCT_INTEGRATION_MODE:local-demo}
+      base-url: ${PRODUCT_SERVICE_URL:http://localhost:8082}
   time-travel:
     enabled: ${APP_TIME_TRAVEL_ENABLED:false}
   jwt:

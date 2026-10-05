@@ -17,6 +17,7 @@ import com.bank.fd.service.InterestEngineService;
 import com.bank.fd.service.InterestLifecycleService;
 import com.bank.fd.service.MaturityService;
 import com.bank.fd.service.AuditTrailService;
+import com.bank.fd.service.BusinessDateService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +41,7 @@ public class MaturityServiceImpl implements MaturityService {
     private final FdStatementRepository statementRepository;
     private final AccountNumberGenerator accountNumberGenerator;
     private final AuditTrailService auditTrail;
+    private final BusinessDateService businessDateService;
 
     public MaturityServiceImpl(FdAccountRepository accountRepository,
                                InterestEngineService interestEngineService,
@@ -49,7 +51,8 @@ public class MaturityServiceImpl implements MaturityService {
                                EventPublisher eventPublisher,
                                FdStatementRepository statementRepository,
                                AccountNumberGenerator accountNumberGenerator,
-                               AuditTrailService auditTrail) {
+                               AuditTrailService auditTrail,
+                               BusinessDateService businessDateService) {
         this.accountRepository = accountRepository;
         this.interestEngineService = interestEngineService;
         this.lifecycleService = lifecycleService;
@@ -59,6 +62,7 @@ public class MaturityServiceImpl implements MaturityService {
         this.statementRepository = statementRepository;
         this.accountNumberGenerator = accountNumberGenerator;
         this.auditTrail = auditTrail;
+        this.businessDateService = businessDateService;
     }
 
     @Override
@@ -81,7 +85,7 @@ public class MaturityServiceImpl implements MaturityService {
     public ApiResponse closeMaturedAccount(String fdAccountNo, String requestedBy) {
         FdAccount account = accountRepository.findById(fdAccountNo)
                 .orElseThrow(() -> new FdNotFoundException(fdAccountNo));
-        LocalDate today = LocalDate.now();
+        LocalDate today = businessDateService.currentBusinessDate();
         if (!FdLifecycleStatus.ACTIVE.name().equalsIgnoreCase(account.getStatus())) {
             throw new InvalidOperationException("Account is not ACTIVE: " + fdAccountNo);
         }

@@ -16,6 +16,7 @@ import com.bank.fd.service.FdTransactionService;
 import com.bank.fd.service.InterestLifecycleService;
 import com.bank.fd.service.WithdrawalService;
 import com.bank.fd.service.AuditTrailService;
+import com.bank.fd.service.BusinessDateService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +36,7 @@ public class WithdrawalServiceImpl implements WithdrawalService {
     private final FdStatementRepository statementRepository;
     private final FdInterestTransactionRepository interestRepository;
     private final AuditTrailService auditTrail;
+    private final BusinessDateService businessDateService;
 
     public WithdrawalServiceImpl(FdAccountRepository accountRepository,
                                  InterestLifecycleService lifecycleService,
@@ -42,7 +44,8 @@ public class WithdrawalServiceImpl implements WithdrawalService {
                                  EventPublisher eventPublisher,
                                  FdStatementRepository statementRepository,
                                  FdInterestTransactionRepository interestRepository,
-                                 AuditTrailService auditTrail) {
+                                 AuditTrailService auditTrail,
+                                 BusinessDateService businessDateService) {
         this.accountRepository = accountRepository;
         this.lifecycleService = lifecycleService;
         this.transactionService = transactionService;
@@ -50,6 +53,7 @@ public class WithdrawalServiceImpl implements WithdrawalService {
         this.statementRepository = statementRepository;
         this.interestRepository = interestRepository;
         this.auditTrail = auditTrail;
+        this.businessDateService = businessDateService;
     }
 
     @Override
@@ -60,7 +64,8 @@ public class WithdrawalServiceImpl implements WithdrawalService {
             throw new InvalidOperationException("Account is not ACTIVE: " + request.getFdAccountNo());
         }
 
-        LocalDate withdrawalDate = request.getWithdrawalDate() != null ? request.getWithdrawalDate() : LocalDate.now();
+        LocalDate withdrawalDate = request.getWithdrawalDate() != null
+                ? request.getWithdrawalDate() : businessDateService.currentBusinessDate();
         if (withdrawalDate.isBefore(initial.getStartDate())) {
             throw new InvalidOperationException("Withdrawal date cannot be before FD start date: " + initial.getStartDate());
         }

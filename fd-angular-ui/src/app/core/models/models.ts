@@ -116,12 +116,10 @@ export interface Statement {
 }
 
 export interface FdSimulationRequest {
+  productCode: string;
   principal: number;
   termMonths: number;
-  baseRate: number;
   compoundingFrequency: string;
-  calculationType: string;
-  categories: string[];
 }
 
 export interface FdSimulationResponse {

@@ -2,15 +2,15 @@ package com.bank.fd.event;
 
 import com.bank.fd.entity.FdAccount;
 import com.bank.fd.entity.FdOutboxEvent;
+import com.bank.fd.entity.FdTransaction;
 import com.bank.fd.repository.FdAccountRepository;
 import com.bank.fd.repository.FdOutboxEventRepository;
+import com.bank.fd.service.BusinessDateService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -26,54 +26,51 @@ public class LifecycleOutboxWriter {
     private final FdOutboxEventRepository outboxRepository;
     private final FdAccountRepository accountRepository;
     private final ObjectMapper objectMapper;
+    private final BusinessDateService businessDateService;
 
     @Value("${app.events.topic:fd.lifecycle.v1}")
     private String topic;
 
     public LifecycleOutboxWriter(FdOutboxEventRepository outboxRepository,
                                  FdAccountRepository accountRepository,
-                                 ObjectMapper objectMapper) {
+                                 ObjectMapper objectMapper,
+                                 BusinessDateService businessDateService) {
         this.outboxRepository = outboxRepository;
         this.accountRepository = accountRepository;
         this.objectMapper = objectMapper;
+        this.businessDateService = businessDateService;
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
     public void onOpened(FDOpenedEvent event) {
         enqueue("FD_OPENED", event.getCustomerId(), event.getFdAccountNo(), event.getPrincipalAmount(),
-                event.getMaturityDate(), "Fixed Deposit Account Opened: " + event.getFdAccountNo(),
+                businessDateService.currentBusinessDate(), "Fixed Deposit Account Opened: " + event.getFdAccountNo(),
                 "Your fixed deposit account " + event.getFdAccountNo() + " has been opened.", Map.of());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
     public void onAccrued(InterestAccruedEvent event) {
         enqueue("INTEREST_ACCRUED", event.getCustomerId(), event.getFdAccountNo(), event.getInterestAmount(),
                 event.getAccrualDate(), "FD Interest Accrued: " + event.getFdAccountNo(),
                 "Interest has accrued to fixed deposit account " + event.getFdAccountNo() + ".", Map.of());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
     public void onCapitalized(InterestCapitalizedEvent event) {
         enqueue("INTEREST_CAPITALIZED", event.getCustomerId(), event.getFdAccountNo(), event.getAmount(),
                 event.getBusinessDate(), "FD Interest Capitalized: " + event.getFdAccountNo(),
                 "Accrued interest was capitalized into fixed deposit account " + event.getFdAccountNo() + ".", Map.of());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
     public void onPaid(InterestPaidEvent event) {
         enqueue("INTEREST_PAID", event.getCustomerId(), event.getFdAccountNo(), event.getAmount(),
                 event.getBusinessDate(), "FD Interest Paid: " + event.getFdAccountNo(),
                 "Interest was paid from fixed deposit account " + event.getFdAccountNo() + ".", Map.of());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
     public void onMatured(FDMaturedEvent event) {
         enqueue("FD_MATURED", event.getCustomerId(), event.getFdAccountNo(), event.getMaturityAmount(),
                 event.getMaturityDate(), "Fixed Deposit Matured: " + event.getFdAccountNo(),
                 "Your fixed deposit account " + event.getFdAccountNo() + " has matured.", Map.of());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
     public void onWithdrawn(FDWithdrawnEvent event) {
         enqueue("FD_PREMATURELY_CLOSED", event.getCustomerId(), event.getFdAccountNo(), event.getWithdrawalAmount(),
                 event.getWithdrawalDate(), "Fixed Deposit Closed: " + event.getFdAccountNo(),
@@ -81,7 +78,6 @@ public class LifecycleOutboxWriter {
                 Map.of("penaltyApplied", event.isPenaltyApplied()));
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
     public void onRenewed(FDRenewedEvent event) {
         enqueue("FD_RENEWED", event.getCustomerId(), event.getRenewalAccountNo(), event.getAmount(),
                 event.getRenewalDate(), "Fixed Deposit Renewed: " + event.getRenewalAccountNo(),
@@ -90,7 +86,6 @@ public class LifecycleOutboxWriter {
                         "renewalAccountNo", event.getRenewalAccountNo()));
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
     public void onOpeningWorkflow(FDOpeningWorkflowEvent event) {
         String eventId = UUID.randomUUID().toString();
         String correlationId = MDC.get("correlationId");
@@ -99,6 +94,7 @@ public class LifecycleOutboxWriter {
         payload.put("schemaVersion", "1.0");
         payload.put("eventId", eventId);
         payload.put("correlationId", correlationId);
+        payload.put("causationId", MDC.get("causationId"));
         payload.put("producer", "fd-account-service");
         payload.put("occurredAt", Instant.now().toString());
         payload.put("eventType", event.getEventType());
@@ -107,7 +103,8 @@ public class LifecycleOutboxWriter {
         payload.put("customerId", event.getCustomerId());
         payload.put("productCode", event.getProductCode());
         payload.put("amount", event.getAmount());
-        payload.put("currency", "INR");
+        payload.put("currency", event.getCurrency());
+        payload.put("businessDate", businessDateService.currentBusinessDate());
         payload.put("status", event.getStatus());
         payload.put("subject", "FD opening request " + event.getStatus());
         payload.put("messageBody", "Your FD opening request " + event.getRequestId()
@@ -127,6 +124,58 @@ public class LifecycleOutboxWriter {
         outbox.setOccurredAt(now);
         outbox.setCreatedAt(now);
         outbox.setNextAttemptAt(now);
+        outbox.setSchemaVersion("1.0");
+        outbox.setBusinessDate(businessDateService.currentBusinessDate());
+        outbox.setCorrelationId(correlationId);
+        outbox.setCausationId(MDC.get("causationId"));
+        outboxRepository.save(outbox);
+    }
+
+    public void onFinancialTransaction(FdTransaction transaction) {
+        FdAccount account = accountRepository.findById(transaction.getFdAccountNo()).orElse(null);
+        String eventId = UUID.randomUUID().toString();
+        String correlationId = MDC.get("correlationId");
+        if (correlationId == null || correlationId.isBlank()) correlationId = eventId;
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("schemaVersion", "1.0");
+        payload.put("eventId", eventId);
+        payload.put("eventType", "FD_TRANSACTION_RECORDED");
+        payload.put("aggregateType", "FD_TRANSACTION");
+        payload.put("aggregateId", transaction.getUuid());
+        payload.put("correlationId", correlationId);
+        payload.put("causationId", MDC.get("causationId"));
+        payload.put("producer", "fd-account-service");
+        payload.put("occurredAt", Instant.now().toString());
+        payload.put("businessDate", transaction.getBusinessDate());
+        payload.put("transactionType", transaction.getTxnType());
+        payload.put("transactionReference", transaction.getReferenceId());
+        payload.put("fdAccountNo", transaction.getFdAccountNo());
+        payload.put("customerId", account != null ? account.getCustomerId() : null);
+        payload.put("productCode", account != null ? account.getProductCode() : null);
+        payload.put("currency", transaction.getCurrency());
+        payload.put("amount", transaction.getAmount());
+        payload.put("debitGlAccount", transaction.getDebitGlAccount());
+        payload.put("creditGlAccount", transaction.getCreditGlAccount());
+        payload.put("status", transaction.getStatus());
+
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+        FdOutboxEvent outbox = new FdOutboxEvent();
+        outbox.setEventId(eventId);
+        outbox.setAggregateType("FD_TRANSACTION");
+        outbox.setAggregateId(transaction.getUuid());
+        outbox.setEventType("FD_TRANSACTION_RECORDED");
+        outbox.setTopic(topic);
+        outbox.setPartitionKey(transaction.getFdAccountNo());
+        outbox.setPayload(serialize(payload));
+        outbox.setStatus("PENDING");
+        outbox.setAttemptCount(0);
+        outbox.setOccurredAt(now);
+        outbox.setCreatedAt(now);
+        outbox.setNextAttemptAt(now);
+        outbox.setSchemaVersion("1.0");
+        outbox.setBusinessDate(transaction.getBusinessDate());
+        outbox.setCorrelationId(correlationId);
+        outbox.setCausationId(MDC.get("causationId"));
         outboxRepository.save(outbox);
     }
 
@@ -159,6 +208,9 @@ public class LifecycleOutboxWriter {
         payload.put("principalAmount", account != null ? account.getPrincipalAmount() : null);
         payload.put("currentBalance", account != null ? account.getCurrentBalance() : null);
         payload.put("accruedInterest", account != null ? account.getAccruedInterest() : null);
+        payload.put("interestRate", account != null ? account.getInterestRate() : null);
+        payload.put("tenureMonths", account != null ? account.getTenureMonths() : null);
+        payload.put("maturityDate", account != null ? account.getMaturityDate() : null);
         payload.put("subject", subject);
         payload.put("messageBody", summary + " Amount: " + currency + " " + amount + ".");
         payload.putAll(additionalData);
@@ -177,6 +229,10 @@ public class LifecycleOutboxWriter {
         outbox.setOccurredAt(now);
         outbox.setCreatedAt(now);
         outbox.setNextAttemptAt(now);
+        outbox.setSchemaVersion("1.0");
+        outbox.setBusinessDate(businessDate);
+        outbox.setCorrelationId(correlationId);
+        outbox.setCausationId(MDC.get("causationId"));
         outboxRepository.save(outbox);
     }
 

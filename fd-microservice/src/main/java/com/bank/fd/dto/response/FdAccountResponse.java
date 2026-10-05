@@ -10,6 +10,9 @@ public class FdAccountResponse {
     private String customerName;
     private String customerCategory;
     private String productCode;
+    private String productVersion;
+    private String calculationType;
+    private String payoutAccountRef;
     private String currency;
     private BigDecimal principalAmount;
     private BigDecimal currentBalance;
@@ -59,6 +62,12 @@ public class FdAccountResponse {
 
     public String getProductCode() { return productCode; }
     public void setProductCode(String productCode) { this.productCode = productCode; }
+    public String getProductVersion() { return productVersion; }
+    public void setProductVersion(String productVersion) { this.productVersion = productVersion; }
+    public String getCalculationType() { return calculationType; }
+    public void setCalculationType(String calculationType) { this.calculationType = calculationType; }
+    public String getPayoutAccountRef() { return payoutAccountRef; }
+    public void setPayoutAccountRef(String payoutAccountRef) { this.payoutAccountRef = payoutAccountRef; }
 
     public String getCurrency() { return currency; }
     public void setCurrency(String currency) { this.currency = currency; }

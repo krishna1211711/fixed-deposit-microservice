@@ -6,6 +6,7 @@ import com.bank.fd.service.FdCalculatorService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,7 +26,14 @@ public class FdCalculatorCompatibilityController {
 
     @PostMapping("/api/fd/calculate")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<FdCalculateResponse> calculate(@Valid @RequestBody FdCalculateRequest request) {
-        return ResponseEntity.ok(calculatorService.calculate(request));
+    public ResponseEntity<FdCalculateResponse> calculate(@Valid @RequestBody FdCalculateRequest request,
+                                                         Authentication authentication) {
+        String customerId = null;
+        if (authentication != null && authentication.getCredentials() != null
+                && authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_CUSTOMER".equals(authority.getAuthority()))) {
+            customerId = authentication.getCredentials().toString();
+        }
+        return ResponseEntity.ok(calculatorService.calculate(request, customerId));
     }
 }

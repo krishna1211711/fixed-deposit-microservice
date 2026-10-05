@@ -18,7 +18,9 @@ public class GatewayRoutesConfig {
         corsConfig.setAllowedOrigins(Arrays.asList("http://localhost:4200", "http://fd-banking.local", "http://localhost"));
         corsConfig.setMaxAge(3600L);
         corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"));
-        corsConfig.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "X-Requested-With", "Cache-Control"));
+        corsConfig.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "X-Requested-With",
+                "Cache-Control", "Idempotency-Key", "X-Correlation-Id"));
+        corsConfig.setExposedHeaders(Arrays.asList("X-Correlation-Id"));
         corsConfig.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

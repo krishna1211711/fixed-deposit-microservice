@@ -66,6 +66,11 @@ class NotificationProcessingTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Missing required event fields"):
             app.process_event({"eventId": "only-an-id"}, Mock(), "fd.lifecycle.v1")
 
+    @patch("app.send_email")
+    def test_accounting_only_event_is_ignored(self, send_email):
+        app.process_event({"eventType": "FD_TRANSACTION_RECORDED"}, Mock(), "fd.lifecycle.v1")
+        send_email.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

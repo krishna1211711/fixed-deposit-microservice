@@ -1,11 +1,9 @@
 package com.bank.fd.event;
 
-import org.springframework.context.ApplicationEvent;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-public class FDOpenedEvent extends ApplicationEvent {
+public class FDOpenedEvent {
 
     private final String fdAccountNo;
     private final String customerId;
@@ -13,8 +11,7 @@ public class FDOpenedEvent extends ApplicationEvent {
     private final BigDecimal interestRate;
     private final LocalDate maturityDate;
 
-    public FDOpenedEvent(Object source, String fdAccountNo, String customerId, BigDecimal principalAmount, BigDecimal interestRate, LocalDate maturityDate) {
-        super(source);
+    public FDOpenedEvent(String fdAccountNo, String customerId, BigDecimal principalAmount, BigDecimal interestRate, LocalDate maturityDate) {
         this.fdAccountNo = fdAccountNo;
         this.customerId = customerId;
         this.principalAmount = principalAmount;
